@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Побег из лабиринта</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <section id="join-screen" class="screen">
+        <div class="card hero">
+          <h1>Побег из лабиринта</h1>
+          <p class="muted">
+            Выходов на один меньше, чем игроков. Найдите выход раньше
+            остальных — или хотя бы не последним.
+          </p>
+          <form id="join-form" autocomplete="off">
+            <label for="name-input">Ваше имя</label>
+            <div class="row">
+              <input
+                id="name-input"
+                name="name"
+                maxlength="20"
+                required
+                placeholder="Например, Аня"
+              />
+              <button type="submit">Войти</button>
+            </div>
+          </form>
+          <p id="join-error" class="error" role="alert" hidden></p>
+        </div>
+      </section>
+
+      <section id="lobby-screen" class="screen" hidden>
+        <div class="card">
+          <h1>Лобби</h1>
+          <p class="muted">
+            Игроки: <span id="lobby-count">0 / 0</span>
+          </p>
+          <ul id="lobby-players" class="players-list"></ul>
+          <p id="lobby-hint" class="muted"></p>
+          <button id="ready-button" type="button">Готов</button>
+        </div>
+      </section>
+
+      <section id="game-screen" class="screen" hidden>
+        <header class="topbar">
+          <div class="stat">
+            <div class="label">Ход</div>
+            <div id="turn-info" class="value">—</div>
+          </div>
+          <div class="stat">
+            <div class="label">Выходов осталось</div>
+            <div id="exits-info" class="value">—</div>
+          </div>
+          <div class="stat">
+            <div class="label">Вы</div>
+            <div id="you-info" class="value">—</div>
+          </div>
+        </header>
+
+        <main class="board-area">
+          <div class="board-wrap">
+            <canvas id="board" width="0" height="0"></canvas>
+          </div>
+
+          <aside class="sidebar">
+            <section class="panel">
+              <h2>Игроки</h2>
+              <ul id="players-panel" class="players-list compact"></ul>
+            </section>
+            <section class="panel">
+              <h2>События</h2>
+              <ol id="log-panel" class="log"></ol>
+            </section>
+          </aside>
+        </main>
+
+        <div class="dpad" id="controls">
+          <button data-dir="up" type="button" aria-label="Вверх">↑</button>
+          <button data-dir="left" type="button" aria-label="Влево">←</button>
+          <button data-dir="down" type="button" aria-label="Вниз">↓</button>
+          <button data-dir="right" type="button" aria-label="Вправо">→</button>
+        </div>
+        <p class="hint muted">
+          Управление: стрелки или WASD. Видно только 8 соседних клеток —
+          исследованная карта запоминается.
+        </p>
+      </section>
+
+      <div id="modal-root"></div>
+      <div id="toast-root" class="toast-root"></div>
+
+      <div id="connection-overlay" class="overlay" hidden>
+        <div class="card modal">
+          <h2>Соединение потеряно</h2>
+          <p class="muted">
+            Перезагрузите страницу, чтобы подключиться к серверу снова.
+          </p>
+          <div class="modal-actions">
+            <button type="button" onclick="location.reload()">
+              Перезагрузить
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/js/main.js"></script>
+  </body>
+</html>
