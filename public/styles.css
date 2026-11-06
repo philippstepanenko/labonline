@@ -255,6 +255,92 @@ form label {
   color: #5be29a;
 }
 
+.rooms-list {
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.room-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #0f1622;
+}
+
+.room-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.room-code {
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  font-size: 13px;
+}
+
+.room-item .player-name {
+  flex: 0 1 auto;
+}
+
+.room-item .tags {
+  white-space: normal;
+}
+
+#create-room-form,
+#maze-size-form {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.size-row {
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.size-row label {
+  flex: 1 1 90px;
+  margin-top: 0;
+}
+
+.size-row input {
+  margin-top: 6px;
+}
+
+.size-row button {
+  flex: 0 0 auto;
+}
+
+#create-room-form button[type="submit"],
+#maze-size-form button[type="submit"] {
+  background: linear-gradient(180deg, #3f7bff, #2f5fd0);
+  border-color: #4f8cff;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+#leave-room-button {
+  width: 100%;
+  margin-top: 10px;
+}
+
+button.secondary {
+  background: #121a28;
+}
+
 .dot {
   width: 10px;
   height: 10px;

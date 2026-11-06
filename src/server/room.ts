@@ -1,5 +1,5 @@
 import { randomInt } from 'node:crypto';
-import type { Config } from '../shared/config';
+import { normalizeMazeSize, type Config } from '../shared/config';
 import type {
   ClientMessage,
   Dir,
@@ -12,11 +12,26 @@ import { generateMaze, type RNG } from './maze';
 
 export type RoomPhase = 'lobby' | 'playing' | 'over';
 
+export interface RoomOptions {
+  id: string;
+  mazeWidth: number;
+  mazeHeight: number;
+}
+
+export interface RoomHooks {
+  onChange?: () => void;
+  onEmpty?: () => void;
+}
+
 interface RoomPlayer extends GamePlayer {
   ready: boolean;
 }
 
 export type AddPlayerResult =
+  | { ok: true }
+  | { ok: false; code: string; message: string };
+
+export type RoomActionResult =
   | { ok: true }
   | { ok: false; code: string; message: string };
 
@@ -40,15 +55,29 @@ function shuffle<T>(items: T[], rng: RNG): T[] {
 
 export class Room {
   readonly config: Config;
+  readonly id: string;
 
   private readonly players = new Map<string, RoomPlayer>();
   private readonly rng: RNG;
+  private readonly hooks: RoomHooks;
   private phase: RoomPhase = 'lobby';
   private game: Game | null = null;
   private overAcks = new Set<string>();
+  private ownerId: string | null = null;
+  private mazeWidth: number;
+  private mazeHeight: number;
 
-  constructor(config: Config, rng: RNG = cryptoRng) {
+  constructor(
+    config: Config,
+    options: RoomOptions,
+    hooks: RoomHooks = {},
+    rng: RNG = cryptoRng,
+  ) {
     this.config = config;
+    this.id = options.id;
+    this.mazeWidth = options.mazeWidth;
+    this.mazeHeight = options.mazeHeight;
+    this.hooks = hooks;
     this.rng = rng;
   }
 
@@ -58,6 +87,23 @@ export class Room {
 
   get playerCount(): number {
     return this.players.size;
+  }
+
+  get currentOwnerId(): string | null {
+    return this.ownerId;
+  }
+
+  get ownerName(): string | null {
+    if (!this.ownerId) return null;
+    return this.players.get(this.ownerId)?.name ?? null;
+  }
+
+  get currentMazeWidth(): number {
+    return this.mazeWidth;
+  }
+
+  get currentMazeHeight(): number {
+    return this.mazeHeight;
   }
 
   addPlayer(id: string, name: string, send: SendFn): AddPlayerResult {
@@ -91,7 +137,7 @@ export class Room {
         return {
           ok: false,
           code: 'name_taken',
-          message: 'Это имя уже занято',
+          message: 'Это имя уже занято в этой комнате',
         };
       }
     }
@@ -109,11 +155,14 @@ export class Room {
     };
 
     this.players.set(id, player);
+    if (!this.ownerId) this.ownerId = id;
+
     this.sendTo(player, {
       type: 'welcome',
       youId: id,
       name: player.name,
       maxPlayers: this.config.maxPlayers,
+      roomId: this.id,
     });
     this.broadcastLobby();
     return { ok: true };
@@ -125,11 +174,17 @@ export class Room {
 
     if (this.phase === 'lobby') {
       this.players.delete(id);
+      this.ensureOwner();
+      if (this.players.size === 0) {
+        this.hooks.onEmpty?.();
+        return;
+      }
       this.broadcastLobby();
       return;
     }
 
     player.connected = false;
+    this.ensureOwner();
 
     if (this.phase === 'playing' && this.game) {
       this.game.disconnect(id);
@@ -146,6 +201,39 @@ export class Room {
     }
 
     this.checkOverAcks();
+    this.hooks.onChange?.();
+  }
+
+  setMazeSize(id: string, width: number, height: number): RoomActionResult {
+    if (this.phase !== 'lobby') {
+      return {
+        ok: false,
+        code: 'game_running',
+        message: 'Размер можно менять только до начала игры',
+      };
+    }
+    if (id !== this.ownerId) {
+      return {
+        ok: false,
+        code: 'not_owner',
+        message: 'Менять размер лабиринта может только создатель комнаты',
+      };
+    }
+
+    const nextWidth = normalizeMazeSize(width);
+    const nextHeight = normalizeMazeSize(height);
+    if (nextWidth === null || nextHeight === null) {
+      return {
+        ok: false,
+        code: 'bad_size',
+        message: 'Размер должен быть целым числом от 9 до 21',
+      };
+    }
+
+    this.mazeWidth = nextWidth;
+    this.mazeHeight = nextHeight;
+    this.broadcastLobby();
+    return { ok: true };
   }
 
   handleMessage(id: string, message: ClientMessage): void {
@@ -153,13 +241,17 @@ export class Room {
     if (!player) return;
 
     switch (message.type) {
-      case 'join':
-        this.sendTo(player, {
-          type: 'error',
-          code: 'already_joined',
-          message: 'Вы уже в комнате',
-        });
+      case 'setMazeSize': {
+        const result = this.setMazeSize(id, message.width, message.height);
+        if (!result.ok) {
+          this.sendTo(player, {
+            type: 'error',
+            code: result.code,
+            message: result.message,
+          });
+        }
         return;
+      }
 
       case 'ready':
         this.setReady(id, message.value);
@@ -189,6 +281,12 @@ export class Room {
 
       case 'backToLobby':
         this.ackOver(id);
+        return;
+
+      case 'listRooms':
+      case 'createRoom':
+      case 'joinRoom':
+      case 'leaveRoom':
         return;
 
       default:
@@ -221,8 +319,8 @@ export class Room {
     try {
       maze = generateMaze(
         connected.length,
-        this.config.mazeWidth,
-        this.config.mazeHeight,
+        this.mazeWidth,
+        this.mazeHeight,
         this.rng,
       );
     } catch (error) {
@@ -255,8 +353,10 @@ export class Room {
       onOver: () => {
         this.phase = 'over';
         this.overAcks.clear();
+        this.hooks.onChange?.();
       },
     });
+    this.hooks.onChange?.();
   }
 
   private ackOver(id: string): void {
@@ -296,7 +396,22 @@ export class Room {
       player.pos = { x: 0, y: 0 };
     }
 
+    this.ensureOwner();
+
+    if (this.players.size === 0) {
+      this.hooks.onEmpty?.();
+      return;
+    }
+
     this.broadcastLobby();
+  }
+
+  private ensureOwner(): void {
+    const current = this.ownerId ? this.players.get(this.ownerId) : undefined;
+    if (current && current.connected) return;
+
+    const next = [...this.players.values()].find((player) => player.connected);
+    this.ownerId = next ? next.id : null;
   }
 
   private broadcastLobby(): void {
@@ -318,12 +433,18 @@ export class Room {
       if (!player.connected) continue;
       this.sendTo(player, {
         type: 'lobby',
+        roomId: this.id,
+        ownerId: this.ownerId,
+        mazeWidth: this.mazeWidth,
+        mazeHeight: this.mazeHeight,
         players,
         maxPlayers: this.config.maxPlayers,
         minPlayers: this.config.minPlayers,
         canStart,
       });
     }
+
+    this.hooks.onChange?.();
   }
 
   private sendTo(player: RoomPlayer, message: ServerMessage): void {

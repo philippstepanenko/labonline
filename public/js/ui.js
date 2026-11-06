@@ -35,17 +35,86 @@ export function clearJoinError() {
   element.hidden = true;
 }
 
+export function showRoomsError(message) {
+  const element = $('#rooms-error');
+  element.textContent = message;
+  element.hidden = false;
+}
+
+export function clearRoomsError() {
+  const element = $('#rooms-error');
+  element.textContent = '';
+  element.hidden = true;
+}
+
+export function renderRooms(rooms) {
+  state.rooms = rooms;
+
+  const list = $('#rooms-list');
+  const hint = $('#rooms-hint');
+
+  if (rooms.length === 0) {
+    list.innerHTML = '';
+    hint.textContent = 'Комнат пока нет — создайте первую.';
+    return;
+  }
+
+  hint.textContent = '';
+
+  list.innerHTML = rooms
+    .map((room) => {
+      const full = room.playerCount >= room.maxPlayers;
+      const joinable = room.phase === 'lobby' && !full;
+      const owner = room.ownerName ? escapeHtml(room.ownerName) : 'без владельца';
+      const status =
+        room.phase === 'lobby'
+          ? full
+            ? 'полная'
+            : 'ждёт игроков'
+          : room.phase === 'playing'
+            ? 'игра идёт'
+            : 'игра окончена';
+      const label = joinable
+        ? 'Вступить'
+        : full
+          ? 'Полная'
+          : room.phase === 'playing'
+            ? 'Игра идёт'
+            : 'Недоступна';
+
+      return `<li class="room-item">
+        <div class="room-info">
+          <span class="room-code">${escapeHtml(room.id)}</span>
+          <span class="player-name">${owner}</span>
+          <span class="tags">${room.playerCount}/${room.maxPlayers} · ${room.mazeWidth}×${room.mazeHeight} · ${status}</span>
+        </div>
+        <button type="button" data-room-id="${escapeHtml(room.id)}" ${joinable ? '' : 'disabled'}>${label}</button>
+      </li>`;
+    })
+    .join('');
+}
+
 export function renderLobby(message) {
   state.lobby = message;
+  state.roomId = message.roomId;
+  state.ownerId = message.ownerId;
+  state.mazeWidth = message.mazeWidth;
+  state.mazeHeight = message.mazeHeight;
 
+  $('#room-code').textContent = message.roomId;
+  $('#lobby-owner').textContent =
+    message.players.find((player) => player.id === message.ownerId)?.name ??
+    '—';
+  $('#maze-size').textContent = `${message.mazeWidth}×${message.mazeHeight}`;
   $('#lobby-count').textContent = `${message.players.length} / ${message.maxPlayers}`;
 
   const list = $('#lobby-players');
   list.innerHTML = message.players
     .map((player) => {
       const isYou = player.id === state.youId;
+      const isOwner = player.id === message.ownerId;
       return `<li class="${player.ready ? 'ready' : ''}">
-        <span class="player-name">${escapeHtml(player.name)}${isYou ? ' <span class="you-tag">вы</span>' : ''}</span>
+        <span class="player-name">${escapeHtml(player.name)}${isYou ? ' <span class="you-tag">вы</span>' : ''}${isOwner ? ' <span class="you-tag">владелец</span>' : ''}</span>
         <span class="badge ${player.ready ? 'badge-ready' : ''}">${player.ready ? 'готов' : 'ждём'}</span>
       </li>`;
     })
@@ -56,6 +125,12 @@ export function renderLobby(message) {
   const button = $('#ready-button');
   button.textContent = ready ? 'Отменить готовность' : 'Готов';
   button.disabled = false;
+
+  const sizeForm = $('#maze-size-form');
+  const isOwner = message.ownerId === state.youId;
+  sizeForm.hidden = !isOwner;
+  $('#maze-width').value = String(message.mazeWidth);
+  $('#maze-height').value = String(message.mazeHeight);
 
   const hint = $('#lobby-hint');
   if (message.canStart) {
