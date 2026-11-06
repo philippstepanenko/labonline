@@ -32,15 +32,93 @@
         </div>
       </section>
 
+      <section id="rooms-screen" class="screen" hidden>
+        <div class="card">
+          <h1>Комнаты</h1>
+          <p class="muted">
+            Создайте комнату с нужным размером лабиринта или вступите в
+            существующую.
+          </p>
+          <ul id="rooms-list" class="rooms-list"></ul>
+          <p id="rooms-hint" class="muted"></p>
+          <form id="create-room-form" autocomplete="off">
+            <h2>Новая комната</h2>
+            <div class="row size-row">
+              <label>
+                Ширина
+                <input
+                  id="create-width"
+                  type="number"
+                  min="9"
+                  max="21"
+                  step="2"
+                  value="15"
+                  required
+                />
+              </label>
+              <label>
+                Высота
+                <input
+                  id="create-height"
+                  type="number"
+                  min="9"
+                  max="21"
+                  step="2"
+                  value="15"
+                  required
+                />
+              </label>
+              <button type="submit">Создать комнату</button>
+            </div>
+          </form>
+          <p id="rooms-error" class="error" role="alert" hidden></p>
+        </div>
+      </section>
+
       <section id="lobby-screen" class="screen" hidden>
         <div class="card">
-          <h1>Лобби</h1>
+          <h1>Лобби <span id="room-code" class="room-code"></span></h1>
+          <p class="muted">
+            Владелец: <span id="lobby-owner">—</span> · Размер лабиринта:
+            <span id="maze-size">—</span>
+          </p>
           <p class="muted">
             Игроки: <span id="lobby-count">0 / 0</span>
           </p>
           <ul id="lobby-players" class="players-list"></ul>
           <p id="lobby-hint" class="muted"></p>
+          <form id="maze-size-form" autocomplete="off" hidden>
+            <h2>Размер лабиринта</h2>
+            <div class="row size-row">
+              <label>
+                Ширина
+                <input
+                  id="maze-width"
+                  type="number"
+                  min="9"
+                  max="21"
+                  step="2"
+                  required
+                />
+              </label>
+              <label>
+                Высота
+                <input
+                  id="maze-height"
+                  type="number"
+                  min="9"
+                  max="21"
+                  step="2"
+                  required
+                />
+              </label>
+              <button type="submit">Применить</button>
+            </div>
+          </form>
           <button id="ready-button" type="button">Готов</button>
+          <button id="leave-room-button" class="secondary" type="button">
+            Выйти из комнаты
+          </button>
         </div>
       </section>
 

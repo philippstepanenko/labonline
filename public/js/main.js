@@ -5,8 +5,10 @@ import * as ui from './ui.js';
 
 const renderer = new BoardRenderer(document.querySelector('#board'));
 const joinButton = document.querySelector('#join-form button[type="submit"]');
+const createButton = document.querySelector(
+  '#create-room-form button[type="submit"]',
+);
 let connection = null;
-let joining = false;
 
 function ensureConnection() {
   if (connection) return connection;
@@ -23,15 +25,26 @@ function handleMessage(message) {
       state.youId = message.youId;
       state.name = message.name;
       state.maxPlayers = message.maxPlayers;
-      joining = false;
+      state.roomId = message.roomId;
       joinButton.disabled = false;
       ui.clearJoinError();
+      ui.clearRoomsError();
+      break;
+
+    case 'rooms':
+      state.rooms = message.rooms;
+      createButton.disabled = false;
+      if (state.screen === 'rooms') {
+        ui.renderRooms(message.rooms);
+      }
       break;
 
     case 'lobby':
-      joining = false;
-      joinButton.disabled = false;
       state.phase = 'lobby';
+      state.roomId = message.roomId;
+      state.ownerId = message.ownerId;
+      state.mazeWidth = message.mazeWidth;
+      state.mazeHeight = message.mazeHeight;
       state.over = null;
       state.busy = false;
       state.turn = null;
@@ -102,12 +115,18 @@ function handleMessage(message) {
       break;
 
     case 'error':
-      if (!state.youId) {
-        joining = false;
+      if (!state.roomId) {
         joinButton.disabled = false;
-        ui.showJoinError(message.message);
+        createButton.disabled = false;
+        if (state.screen === 'rooms') {
+          ui.showRoomsError(message.message);
+          ui.renderRooms(state.rooms);
+        } else {
+          ui.showJoinError(message.message);
+        }
       } else {
         ui.toast(message.message);
+        if (state.lobby) ui.renderLobby(state.lobby);
       }
       break;
 
@@ -125,16 +144,61 @@ function sendMove(dir) {
 
 document.querySelector('#join-form').addEventListener('submit', (event) => {
   event.preventDefault();
-  if (joining || state.youId) return;
+  if (state.youId) return;
 
   const input = document.querySelector('#name-input');
   const name = input.value.trim();
   if (!name) return;
 
-  joining = true;
-  joinButton.disabled = true;
+  state.name = name;
   ui.clearJoinError();
-  ensureConnection().send({ type: 'join', name });
+  ui.clearRoomsError();
+  ui.setScreen('rooms');
+  ui.renderRooms(state.rooms);
+  ensureConnection().send({ type: 'listRooms' });
+});
+
+document.querySelector('#rooms-list').addEventListener('click', (event) => {
+  const button = event.target.closest('button[data-room-id]');
+  if (!button || button.disabled) return;
+  if (!state.name) {
+    ui.setScreen('join');
+    return;
+  }
+
+  button.disabled = true;
+  ensureConnection().send({
+    type: 'joinRoom',
+    name: state.name,
+    roomId: button.dataset.roomId,
+  });
+});
+
+document.querySelector('#create-room-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  if (!state.name) {
+    ui.setScreen('join');
+    return;
+  }
+
+  const width = Number(document.querySelector('#create-width').value);
+  const height = Number(document.querySelector('#create-height').value);
+
+  createButton.disabled = true;
+  ui.clearRoomsError();
+  ensureConnection().send({
+    type: 'createRoom',
+    name: state.name,
+    width,
+    height,
+  });
+});
+
+document.querySelector('#maze-size-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  const width = Number(document.querySelector('#maze-width').value);
+  const height = Number(document.querySelector('#maze-height').value);
+  ensureConnection().send({ type: 'setMazeSize', width, height });
 });
 
 document.querySelector('#ready-button').addEventListener('click', () => {
@@ -142,6 +206,14 @@ document.querySelector('#ready-button').addEventListener('click', () => {
     ? state.lobby.players.find((player) => player.id === state.youId)
     : null;
   ensureConnection().send({ type: 'ready', value: !(me && me.ready) });
+});
+
+document.querySelector('#leave-room-button').addEventListener('click', () => {
+  state.lobby = null;
+  state.roomId = null;
+  state.ownerId = null;
+  ui.setScreen('rooms');
+  ensureConnection().send({ type: 'leaveRoom' });
 });
 
 document.querySelector('#controls').addEventListener('click', (event) => {

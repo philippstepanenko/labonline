@@ -3,13 +3,14 @@ import http from 'node:http';
 import path from 'node:path';
 import { WebSocketServer, WebSocket } from 'ws';
 import { loadConfig, type Config } from '../shared/config';
-import type { ClientMessage, ServerMessage } from '../shared/protocol';
-import { Room } from './room';
+import type { ClientMessage, SendFn, ServerMessage } from '../shared/protocol';
+import type { Room } from './room';
+import { RoomManager } from './rooms';
 import { createStaticHandler } from './static';
 
 export interface RunningServer {
   server: http.Server;
-  room: Room;
+  rooms: RoomManager;
   config: Config;
   close: () => Promise<void>;
 }
@@ -22,8 +23,20 @@ function isClientMessage(value: unknown): value is ClientMessage {
   if (!isRecord(value) || typeof value.type !== 'string') return false;
 
   switch (value.type) {
-    case 'join':
-      return typeof value.name === 'string';
+    case 'listRooms':
+      return true;
+    case 'createRoom':
+      return (
+        typeof value.name === 'string' &&
+        typeof value.width === 'number' &&
+        typeof value.height === 'number'
+      );
+    case 'joinRoom':
+      return typeof value.name === 'string' && typeof value.roomId === 'string';
+    case 'leaveRoom':
+      return true;
+    case 'setMazeSize':
+      return typeof value.width === 'number' && typeof value.height === 'number';
     case 'ready':
       return typeof value.value === 'boolean';
     case 'move':
@@ -49,19 +62,35 @@ export function createServer(
   publicDir = path.resolve(process.cwd(), 'public'),
 ): RunningServer {
   const config = loadConfig(overrides);
-  const room = new Room(config);
+  const unjoined = new Map<string, SendFn>();
+
+  function broadcastRooms(): void {
+    const message: ServerMessage = {
+      type: 'rooms',
+      rooms: manager.list(),
+    };
+    for (const send of unjoined.values()) {
+      send(message);
+    }
+  }
+
+  const manager = new RoomManager(config, broadcastRooms);
   const server = http.createServer(createStaticHandler(publicDir));
   const wss = new WebSocketServer({ server });
 
   wss.on('connection', (socket) => {
     const id = randomUUID();
     let joined = false;
+    let currentRoom: Room | null = null;
 
-    const send = (message: ServerMessage): void => {
+    const send: SendFn = (message) => {
       if (socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify(message));
       }
     };
+
+    unjoined.set(id, send);
+    send({ type: 'rooms', rooms: manager.list() });
 
     socket.on('message', (raw) => {
       let parsed: unknown;
@@ -86,38 +115,95 @@ export function createServer(
       }
 
       if (!joined) {
-        if (parsed.type !== 'join') {
-          send({
-            type: 'error',
-            code: 'join_required',
-            message: 'Сначала представьтесь',
-          });
-          return;
-        }
+        switch (parsed.type) {
+          case 'listRooms':
+            send({ type: 'rooms', rooms: manager.list() });
+            return;
 
-        const result = room.addPlayer(id, parsed.name, send);
-        if (!result.ok) {
-          send({ type: 'error', code: result.code, message: result.message });
-          return;
+          case 'createRoom': {
+            unjoined.delete(id);
+            const result = manager.createRoom({
+              playerId: id,
+              name: parsed.name,
+              send,
+              width: parsed.width,
+              height: parsed.height,
+            });
+            if (!result.ok) {
+              unjoined.set(id, send);
+              send({
+                type: 'error',
+                code: result.code,
+                message: result.message,
+              });
+              send({ type: 'rooms', rooms: manager.list() });
+              return;
+            }
+            currentRoom = result.room;
+            joined = true;
+            return;
+          }
+
+          case 'joinRoom': {
+            unjoined.delete(id);
+            const result = manager.joinRoom(parsed.roomId, {
+              playerId: id,
+              name: parsed.name,
+              send,
+            });
+            if (!result.ok) {
+              unjoined.set(id, send);
+              send({
+                type: 'error',
+                code: result.code,
+                message: result.message,
+              });
+              send({ type: 'rooms', rooms: manager.list() });
+              return;
+            }
+            currentRoom = result.room;
+            joined = true;
+            return;
+          }
+
+          default:
+            send({
+              type: 'error',
+              code: 'join_required',
+              message: 'Сначала создайте комнату или вступите в неё',
+            });
+            return;
         }
-        joined = true;
+      }
+
+      if (parsed.type === 'leaveRoom') {
+        currentRoom?.removePlayer(id);
+        currentRoom = null;
+        joined = false;
+        unjoined.set(id, send);
+        send({ type: 'rooms', rooms: manager.list() });
         return;
       }
 
-      if (parsed.type === 'join') {
+      if (
+        parsed.type === 'listRooms' ||
+        parsed.type === 'createRoom' ||
+        parsed.type === 'joinRoom'
+      ) {
         send({
           type: 'error',
-          code: 'already_joined',
-          message: 'Вы уже в комнате',
+          code: 'already_in_room',
+          message: 'Сначала выйдите из текущей комнаты',
         });
         return;
       }
 
-      room.handleMessage(id, parsed);
+      currentRoom?.handleMessage(id, parsed);
     });
 
     socket.on('close', () => {
-      if (joined) room.removePlayer(id);
+      unjoined.delete(id);
+      if (joined) currentRoom?.removePlayer(id);
     });
 
     socket.on('error', () => {
@@ -135,7 +221,7 @@ export function createServer(
       });
     });
 
-  return { server, room, config, close };
+  return { server, rooms: manager, config, close };
 }
 
 export function start(): void {

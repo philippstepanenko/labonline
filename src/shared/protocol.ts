@@ -15,6 +15,18 @@ export interface LobbyPlayer {
   connected: boolean;
 }
 
+export interface RoomSummary {
+  id: string;
+  ownerId: string | null;
+  ownerName: string | null;
+  playerCount: number;
+  maxPlayers: number;
+  minPlayers: number;
+  mazeWidth: number;
+  mazeHeight: number;
+  phase: GamePhase;
+}
+
 export interface NamedPlayer {
   id: string;
   name: string;
@@ -65,7 +77,11 @@ export type EventKind =
   | 'info';
 
 export type ClientMessage =
-  | { type: 'join'; name: string }
+  | { type: 'listRooms' }
+  | { type: 'createRoom'; name: string; width: number; height: number }
+  | { type: 'joinRoom'; name: string; roomId: string }
+  | { type: 'leaveRoom' }
+  | { type: 'setMazeSize'; width: number; height: number }
   | { type: 'ready'; value: boolean }
   | { type: 'move'; dir: Dir }
   | { type: 'chooseAction'; action: 'swap' | 'fight' }
@@ -73,9 +89,20 @@ export type ClientMessage =
   | { type: 'backToLobby' };
 
 export type ServerMessage =
-  | { type: 'welcome'; youId: string; name: string; maxPlayers: number }
+  | {
+      type: 'welcome';
+      youId: string;
+      name: string;
+      maxPlayers: number;
+      roomId: string;
+    }
+  | { type: 'rooms'; rooms: RoomSummary[] }
   | {
       type: 'lobby';
+      roomId: string;
+      ownerId: string | null;
+      mazeWidth: number;
+      mazeHeight: number;
       players: LobbyPlayer[];
       maxPlayers: number;
       minPlayers: number;
