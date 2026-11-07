@@ -16,7 +16,8 @@ function makePlayers(ids: string[], sent: SentMessage[]): GamePlayer[] {
     connected: true,
     active: false,
     escaped: false,
-    skipNext: false,
+    energy: 1,
+    defeated: false,
     pos: { x: 0, y: 0 },
   }));
 }
@@ -78,8 +79,8 @@ function hasMessage(
   return sent.some((entry) => predicate(entry.message));
 }
 
-describe('Game: ходы и стены', () => {
-  it('не тратит ход при попытке войти в стену', () => {
+describe('Game: ходы, стены и энергия', () => {
+  it('не тратит ход и энергию при попытке войти в стену', () => {
     const sent: SentMessage[] = [];
     const game = createGame({ sent, starts: [[1, 1], [3, 3]], exits: [[3, 1]] });
 
@@ -87,6 +88,7 @@ describe('Game: ходы и стены', () => {
 
     expect(game.currentPlayerId).toBe('p1');
     expect(playerState(game, 'p1').pos).toEqual({ x: 1, y: 1 });
+    expect(playerState(game, 'p1').energy).toBe(1);
     expect(
       hasMessage(
         sent,
@@ -113,15 +115,29 @@ describe('Game: ходы и стены', () => {
     ).toBe(true);
   });
 
-  it('перемещает игрока и передаёт ход дальше', () => {
+  it('перемещает игрока, тратит энергию и передаёт ход дальше', () => {
     const sent: SentMessage[] = [];
     const game = createGame({ sent, starts: [[1, 1], [3, 3]], exits: [[3, 1]] });
 
     game.move('p1', 'right');
 
     expect(playerState(game, 'p1').pos).toEqual({ x: 2, y: 1 });
+    expect(playerState(game, 'p1').energy).toBe(0);
     expect(game.currentPlayerId).toBe('p2');
   });
+
+  it('начисляет +1 энергии всем игрокам в начале нового круга', () => {
+    const sent: SentMessage[] = [];
+    const game = createGame({ sent, starts: [[1, 1], [3, 3]], exits: [[3, 1]] });
+
+    game.move('p1', 'right');
+    game.move('p2', 'left');
+
+    expect(playerState(game, 'p1').energy).toBe(1);
+    expect(playerState(game, 'p2').energy).toBe(1);
+    expect(game.currentPlayerId).toBe('p1');
+  });
+
 });
 
 describe('Game: обмен и бой', () => {
@@ -132,6 +148,7 @@ describe('Game: обмен и бой', () => {
     game.move('p1', 'right');
 
     expect(game.currentPlayerId).toBe('p1');
+    expect(playerState(game, 'p1').energy).toBe(1);
     expect(game.debug().pending).toMatchObject({
       initiatorId: 'p1',
       targetId: 'p2',
@@ -146,13 +163,14 @@ describe('Game: обмен и бой', () => {
     ).toBe(true);
   });
 
-  it('бой не меняет позиции, проигравший пропускает свой ход', () => {
+  it('победитель-атакующий тратит 1 энергию, защитник — 3', () => {
     const sent: SentMessage[] = [];
     const game = createGame({
       sent,
-      starts: [[1, 1], [2, 1]],
-      exits: [[3, 3]],
-      rng: () => 0.9,
+      starts: [[1, 1], [2, 1], [3, 3]],
+      exits: [[3, 1]],
+      order: ['p1', 'p2', 'p3'],
+      rng: () => 0.1,
     });
 
     game.move('p1', 'right');
@@ -163,15 +181,40 @@ describe('Game: обмен и бой', () => {
 
     expect(p1.pos).toEqual({ x: 1, y: 1 });
     expect(p2.pos).toEqual({ x: 2, y: 1 });
-    expect(p1.skipNext).toBe(true);
-    expect(p2.skipNext).toBe(false);
-    expect(game.currentPlayerId).toBe('p2');
+    expect(p1.energy).toBe(0);
+    expect(p2.energy).toBe(-2);
+    expect(p1.defeated).toBe(false);
+    expect(p2.defeated).toBe(true);
+    expect(game.currentPlayerId).toBe('p3');
     expect(
-      hasMessage(sent, (message) => message.type === 'event' && message.kind === 'battle'),
+      hasMessage(
+        sent,
+        (message) => message.type === 'event' && message.kind === 'battle',
+      ),
     ).toBe(true);
   });
 
-  it('пропуск срабатывает, когда до проигравшего доходит очередь', () => {
+  it('победитель-защитник тратит 1 энергию, атакующий — 3', () => {
+    const sent: SentMessage[] = [];
+    const game = createGame({
+      sent,
+      starts: [[1, 1], [2, 1], [3, 3]],
+      exits: [[3, 1]],
+      order: ['p1', 'p2', 'p3'],
+      rng: () => 0.9,
+    });
+
+    game.move('p1', 'right');
+    game.chooseAction('p1', 'fight');
+
+    expect(playerState(game, 'p1').energy).toBe(-2);
+    expect(playerState(game, 'p2').energy).toBe(0);
+    expect(playerState(game, 'p1').defeated).toBe(true);
+    expect(playerState(game, 'p2').defeated).toBe(false);
+    expect(game.currentPlayerId).toBe('p3');
+  });
+
+  it('проигравший пропускает ходы, пока энергия меньше 1', () => {
     const sent: SentMessage[] = [];
     const game = createGame({
       sent,
@@ -182,11 +225,11 @@ describe('Game: обмен и бой', () => {
 
     game.move('p1', 'right');
     game.chooseAction('p1', 'fight');
-    expect(game.currentPlayerId).toBe('p2');
 
-    game.move('p2', 'down');
-
-    expect(playerState(game, 'p1').skipNext).toBe(false);
+    expect(playerState(game, 'p1').energy).toBe(-1);
+    expect(playerState(game, 'p2').energy).toBe(1);
+    expect(playerState(game, 'p1').defeated).toBe(true);
+    expect(playerState(game, 'p2').defeated).toBe(false);
     expect(game.currentPlayerId).toBe('p2');
     expect(
       hasMessage(
@@ -197,11 +240,26 @@ describe('Game: обмен и бой', () => {
           message.message.includes('P1'),
       ),
     ).toBe(true);
+
+    game.move('p2', 'down');
+    expect(game.currentPlayerId).toBe('p2');
+    expect(playerState(game, 'p1').energy).toBe(0);
+    expect(playerState(game, 'p1').defeated).toBe(true);
+
+    game.move('p2', 'down');
+    expect(game.currentPlayerId).toBe('p1');
+    expect(playerState(game, 'p1').energy).toBe(1);
+    expect(playerState(game, 'p1').defeated).toBe(false);
   });
 
-  it('принятый обмен меняет позиции игроков', () => {
+  it('принятый обмен тратит по 1 энергии у обоих и меняет позиции', () => {
     const sent: SentMessage[] = [];
-    const game = createGame({ sent, starts: [[1, 1], [2, 1]], exits: [[3, 3]] });
+    const game = createGame({
+      sent,
+      starts: [[1, 1], [2, 1], [3, 3]],
+      exits: [[3, 1]],
+      order: ['p1', 'p2', 'p3'],
+    });
 
     game.move('p1', 'right');
     game.chooseAction('p1', 'swap');
@@ -217,15 +275,55 @@ describe('Game: обмен и бой', () => {
 
     expect(playerState(game, 'p1').pos).toEqual({ x: 2, y: 1 });
     expect(playerState(game, 'p2').pos).toEqual({ x: 1, y: 1 });
-    expect(game.currentPlayerId).toBe('p2');
+    expect(playerState(game, 'p1').energy).toBe(0);
+    expect(playerState(game, 'p2').energy).toBe(0);
+    expect(playerState(game, 'p1').defeated).toBe(false);
+    expect(playerState(game, 'p2').defeated).toBe(false);
+    expect(game.currentPlayerId).toBe('p3');
   });
 
-  it('отказ от обмена запускает бой', () => {
+  it('принятый обмен работает и при нулевой энергии цели, уводя её в минус', () => {
     const sent: SentMessage[] = [];
     const game = createGame({
       sent,
-      starts: [[1, 1], [2, 1]],
-      exits: [[3, 3]],
+      starts: [[1, 1], [2, 2], [4, 4]],
+      exits: [[4, 0]],
+      order: ['p2', 'p1', 'p3'],
+    });
+
+    game.move('p2', 'right');
+    expect(playerState(game, 'p2').energy).toBe(0);
+    expect(game.currentPlayerId).toBe('p1');
+
+    game.move('p1', 'up');
+    game.chooseAction('p1', 'swap');
+    game.respondSwap('p2', true);
+
+    expect(playerState(game, 'p1').pos).toEqual({ x: 2, y: 1 });
+    expect(playerState(game, 'p2').pos).toEqual({ x: 2, y: 2 });
+    expect(playerState(game, 'p1').energy).toBe(0);
+    expect(playerState(game, 'p2').energy).toBe(-1);
+    expect(
+      hasMessage(
+        sent,
+        (message) => message.type === 'event' && message.kind === 'battle',
+      ),
+    ).toBe(false);
+    expect(
+      hasMessage(
+        sent,
+        (message) => message.type === 'event' && message.kind === 'swap',
+      ),
+    ).toBe(true);
+  });
+
+  it('отказ от обмена запускает бой со стандартными списаниями', () => {
+    const sent: SentMessage[] = [];
+    const game = createGame({
+      sent,
+      starts: [[1, 1], [2, 1], [3, 3]],
+      exits: [[3, 1]],
+      order: ['p1', 'p2', 'p3'],
       rng: () => 0.1,
     });
 
@@ -235,9 +333,75 @@ describe('Game: обмен и бой', () => {
 
     expect(playerState(game, 'p1').pos).toEqual({ x: 1, y: 1 });
     expect(playerState(game, 'p2').pos).toEqual({ x: 2, y: 1 });
+    expect(playerState(game, 'p1').energy).toBe(0);
+    expect(playerState(game, 'p2').energy).toBe(-2);
+    expect(playerState(game, 'p2').defeated).toBe(true);
     expect(
-      hasMessage(sent, (message) => message.type === 'event' && message.kind === 'battle'),
+      hasMessage(
+        sent,
+        (message) => message.type === 'event' && message.kind === 'battle',
+      ),
     ).toBe(true);
+  });
+
+  it('не позволяет войти на клетку обычного соперника с нулевой энергией', () => {
+    const sent: SentMessage[] = [];
+    const game = createGame({
+      sent,
+      starts: [[1, 1], [1, 3], [3, 3]],
+      exits: [[3, 1]],
+      order: ['p1', 'p2', 'p3'],
+    });
+
+    game.move('p1', 'down');
+
+    expect(playerState(game, 'p1').energy).toBe(0);
+    expect(playerState(game, 'p1').defeated).toBe(false);
+    expect(game.currentPlayerId).toBe('p2');
+
+    game.move('p2', 'up');
+
+    expect(game.currentPlayerId).toBe('p2');
+    expect(playerState(game, 'p2').pos).toEqual({ x: 1, y: 3 });
+    expect(game.debug().pending).toMatchObject({
+      initiatorId: 'p2',
+      targetId: 'p1',
+      stage: 'choose',
+    });
+    expect(
+      hasMessage(
+        sent,
+        (message) =>
+          message.type === 'chooseAction' && message.targetId === 'p1',
+      ),
+    ).toBe(true);
+  });
+
+  it('позволяет войти на клетку поверженного игрока и совмещает фигуры', () => {
+    const sent: SentMessage[] = [];
+    const game = createGame({
+      sent,
+      starts: [[1, 1], [2, 1]],
+      exits: [[3, 3]],
+      rng: () => 0.9,
+    });
+
+    game.move('p1', 'right');
+    game.chooseAction('p1', 'fight');
+
+    expect(playerState(game, 'p1').energy).toBe(-1);
+    expect(playerState(game, 'p2').energy).toBe(1);
+    expect(playerState(game, 'p1').defeated).toBe(true);
+    expect(playerState(game, 'p2').defeated).toBe(false);
+    expect(game.currentPlayerId).toBe('p2');
+
+    game.move('p2', 'left');
+
+    expect(game.debug().pending).toBeNull();
+    expect(playerState(game, 'p1').pos).toEqual({ x: 1, y: 1 });
+    expect(playerState(game, 'p2').pos).toEqual({ x: 1, y: 1 });
+    expect(playerState(game, 'p1').active).toBe(true);
+    expect(playerState(game, 'p2').active).toBe(true);
   });
 });
 
@@ -335,6 +499,16 @@ describe('Game: туман войны', () => {
 
     expect(otherFromFirst?.pos).toBeUndefined();
     expect(otherFromSecond?.pos).toBeUndefined();
+    expect(otherFromFirst?.energy).toBe(1);
+    expect(otherFromSecond?.energy).toBe(1);
+    expect(otherFromFirst?.defeated).toBe(false);
+    expect(otherFromSecond?.defeated).toBe(false);
+    expect(first.you.energy).toBe(1);
+    expect(second.you.energy).toBe(1);
+    expect(first.you.defeated).toBe(false);
+    expect(second.you.defeated).toBe(false);
+    expect(otherFromFirst).not.toHaveProperty('skipNext');
+    expect(otherFromSecond).not.toHaveProperty('skipNext');
     expect(first.visible.exits).toEqual([]);
     expect(second.visible.exits).toEqual([]);
     expect(first.you.pos).toEqual({ x: 1, y: 1 });

@@ -149,7 +149,8 @@ export class Room {
       connected: true,
       active: false,
       escaped: false,
-      skipNext: false,
+      energy: 0,
+      defeated: false,
       ready: false,
       pos: { x: 0, y: 0 },
     };
@@ -392,7 +393,8 @@ export class Room {
       player.ready = false;
       player.active = false;
       player.escaped = false;
-      player.skipNext = false;
+      player.energy = 0;
+      player.defeated = false;
       player.pos = { x: 0, y: 0 };
     }
 
