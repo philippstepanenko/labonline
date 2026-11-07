@@ -253,7 +253,7 @@ export class Game {
       return;
     }
 
-    if (!accept || target.energy < 1) {
+    if (!accept) {
       this.resolveBattle(initiator, target, true);
       return;
     }

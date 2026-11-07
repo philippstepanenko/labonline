@@ -282,6 +282,41 @@ describe('Game: обмен и бой', () => {
     expect(game.currentPlayerId).toBe('p3');
   });
 
+  it('принятый обмен работает и при нулевой энергии цели, уводя её в минус', () => {
+    const sent: SentMessage[] = [];
+    const game = createGame({
+      sent,
+      starts: [[1, 1], [2, 2], [4, 4]],
+      exits: [[4, 0]],
+      order: ['p2', 'p1', 'p3'],
+    });
+
+    game.move('p2', 'right');
+    expect(playerState(game, 'p2').energy).toBe(0);
+    expect(game.currentPlayerId).toBe('p1');
+
+    game.move('p1', 'up');
+    game.chooseAction('p1', 'swap');
+    game.respondSwap('p2', true);
+
+    expect(playerState(game, 'p1').pos).toEqual({ x: 2, y: 1 });
+    expect(playerState(game, 'p2').pos).toEqual({ x: 2, y: 2 });
+    expect(playerState(game, 'p1').energy).toBe(0);
+    expect(playerState(game, 'p2').energy).toBe(-1);
+    expect(
+      hasMessage(
+        sent,
+        (message) => message.type === 'event' && message.kind === 'battle',
+      ),
+    ).toBe(false);
+    expect(
+      hasMessage(
+        sent,
+        (message) => message.type === 'event' && message.kind === 'swap',
+      ),
+    ).toBe(true);
+  });
+
   it('отказ от обмена запускает бой со стандартными списаниями', () => {
     const sent: SentMessage[] = [];
     const game = createGame({
