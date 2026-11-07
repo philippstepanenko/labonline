@@ -38,7 +38,7 @@ export interface StatePlayer {
   escaped: boolean;
   active: boolean;
   connected: boolean;
-  skipNext: boolean;
+   energy: number;
   isTurn: boolean;
   pos?: Point;
 }
@@ -59,7 +59,7 @@ export interface StateMessage {
     id: string;
     name: string;
     pos: Point;
-    skipNext: boolean;
+    energy: number;
     pending: PendingRole;
   };
   visible: VisibleArea;
@@ -125,7 +125,10 @@ export type ServerMessage =
     }
   | { type: 'swapOffer'; fromId: string; fromName: string }
   | { type: 'event'; kind: EventKind; message: string }
-  | { type: 'moveRejected'; reason: 'wall' | 'notTurn' | 'pending' }
+  | {
+      type: 'moveRejected';
+      reason: 'wall' | 'notTurn' | 'pending' | 'noEnergy';
+    }
   | { type: 'gameOver'; escaped: string[]; losers: string[] }
   | { type: 'error'; code: string; message: string };
 

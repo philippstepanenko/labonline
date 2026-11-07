@@ -21,6 +21,13 @@ const DELTAS: Record<Dir, Point> = {
 
 const MAX_LOG_ENTRIES = 50;
 
+export const START_ENERGY = 1;
+const MOVE_COST = 1;
+const WIN_COST = 1;
+const LOSS_COST = 3;
+const ROUND_ENERGY = 1;
+const MAX_ADVANCE_ROUNDS = 1000;
+
 export interface GamePlayer {
   id: string;
   name: string;
@@ -28,7 +35,7 @@ export interface GamePlayer {
   connected: boolean;
   active: boolean;
   escaped: boolean;
-  skipNext: boolean;
+  energy: number;
   pos: Point;
 }
 
@@ -44,6 +51,7 @@ export interface GameOptions {
   order: string[];
   maze: Maze;
   rng?: RNG;
+  startEnergy?: number;
   onOver?: (escaped: string[], losers: string[]) => void;
 }
 
@@ -54,7 +62,7 @@ export interface DebugPlayer {
   active: boolean;
   escaped: boolean;
   connected: boolean;
-  skipNext: boolean;
+  energy: number;
 }
 
 export interface DebugState {
@@ -76,9 +84,11 @@ export class Game {
   private readonly byId = new Map<string, GamePlayer>();
   private readonly order: string[];
   private readonly rng: RNG;
+  private readonly startEnergy: number;
   private readonly onOver?: (escaped: string[], losers: string[]) => void;
 
   private turnIndex = 0;
+  private stepsSinceRoundStart = 0;
   private pending: PendingInteraction | null = null;
   private currentPhase: 'playing' | 'over' = 'playing';
   private log: string[] = [];
@@ -91,6 +101,7 @@ export class Game {
     this.players = options.players;
     this.order = [...options.order];
     this.rng = options.rng ?? Math.random;
+    this.startEnergy = options.startEnergy ?? START_ENERGY;
     this.onOver = options.onOver;
     this.startCount = this.order.length;
 
@@ -98,7 +109,7 @@ export class Game {
       this.byId.set(player.id, player);
       player.active = true;
       player.escaped = false;
-      player.skipNext = false;
+      player.energy = this.startEnergy;
     }
 
     this.order.forEach((id, index) => {
@@ -141,6 +152,11 @@ export class Game {
       return;
     }
 
+    if (player.energy < 1) {
+      this.sendTo(player, { type: 'moveRejected', reason: 'noEnergy' });
+      return;
+    }
+
     const delta = DELTAS[dir];
     if (!delta) return;
 
@@ -156,23 +172,25 @@ export class Game {
       return;
     }
 
-    const occupant = this.playerAt(target.x, target.y);
-    if (occupant) {
+    const occupants = this.activePlayersAt(target.x, target.y);
+    const blocker = occupants.find((occupant) => occupant.energy >= 1);
+    if (blocker) {
       this.pending = {
         initiatorId: player.id,
-        targetId: occupant.id,
+        targetId: blocker.id,
         dir,
         stage: 'choose',
       };
       this.sendTo(player, {
         type: 'chooseAction',
-        targetId: occupant.id,
-        targetName: occupant.name,
+        targetId: blocker.id,
+        targetName: blocker.name,
         options: ['swap', 'fight'],
       });
       return;
     }
 
+    player.energy -= MOVE_COST;
     player.pos = target;
 
     if (this.exits.has(cellKey(target.x, target.y))) {
@@ -195,20 +213,29 @@ export class Game {
       return;
     }
 
-    if (action === 'fight') {
-      this.resolveBattle(initiator, target);
+    if (action !== 'fight' && action !== 'swap') return;
+
+    if (initiator.energy < 1) {
+      this.pending = null;
+      this.sendTo(initiator, { type: 'moveRejected', reason: 'noEnergy' });
+      this.finishTurn();
       return;
     }
 
-    if (action === 'swap') {
-      this.pending.stage = 'awaitSwap';
-      this.broadcastState();
-      this.sendTo(target, {
-        type: 'swapOffer',
-        fromId: initiator.id,
-        fromName: initiator.name,
-      });
+    initiator.energy -= MOVE_COST;
+
+    if (action === 'fight') {
+      this.resolveBattle(initiator, target, true);
+      return;
     }
+
+    this.pending.stage = 'awaitSwap';
+    this.broadcastState();
+    this.sendTo(target, {
+      type: 'swapOffer',
+      fromId: initiator.id,
+      fromName: initiator.name,
+    });
   }
 
   respondSwap(playerId: string, accept: boolean): void {
@@ -224,10 +251,12 @@ export class Game {
       return;
     }
 
-    if (!accept) {
-      this.resolveBattle(initiator, target);
+    if (!accept || target.energy < 1) {
+      this.resolveBattle(initiator, target, true);
       return;
     }
+
+    target.energy -= MOVE_COST;
 
     const initiatorPos = initiator.pos;
     initiator.pos = target.pos;
@@ -313,7 +342,7 @@ export class Game {
         escaped: other.escaped,
         active: other.active,
         connected: other.connected,
-        skipNext: other.skipNext,
+        energy: other.energy,
         isTurn: this.currentPlayerId === other.id,
         ...(showPosition ? { pos: { ...other.pos } } : {}),
       };
@@ -334,7 +363,7 @@ export class Game {
         id: player.id,
         name: player.name,
         pos: { ...player.pos },
-        skipNext: player.skipNext,
+        energy: player.energy,
         pending: this.pendingRoleFor(player),
       },
       visible,
@@ -356,7 +385,7 @@ export class Game {
         active: player.active,
         escaped: player.escaped,
         connected: player.connected,
-        skipNext: player.skipNext,
+        energy: player.energy,
       })),
       exitsRemaining: this.exits.size,
     };
@@ -368,12 +397,9 @@ export class Game {
     return id ? (this.byId.get(id) ?? null) : null;
   }
 
-  private playerAt(x: number, y: number): GamePlayer | null {
-    return (
-      this.players.find(
-        (player) =>
-          player.active && player.pos.x === x && player.pos.y === y,
-      ) ?? null
+  private activePlayersAt(x: number, y: number): GamePlayer[] {
+    return this.players.filter(
+      (player) => player.active && player.pos.x === x && player.pos.y === y,
     );
   }
 
@@ -395,29 +421,49 @@ export class Game {
 
   private advanceTurn(): void {
     const count = this.order.length;
+    if (count === 0) return;
 
-    for (let step = 1; step <= count; step++) {
-      const index = (this.turnIndex + step) % count;
-      const player = this.byId.get(this.order[index]);
-      if (!player || !player.active) continue;
+    const alreadySkipped = new Set<string>();
 
-      if (player.skipNext) {
-        player.skipNext = false;
-        this.logMessage('skip', `${player.name} пропускает ход`);
-        continue;
-      }
+    for (let round = 0; round < MAX_ADVANCE_ROUNDS; round++) {
+      for (let step = 1; step <= count; step++) {
+        const index = (this.turnIndex + step) % count;
+        this.stepsSinceRoundStart += 1;
 
-      this.turnIndex = index;
-      return;
-    }
+        if (this.stepsSinceRoundStart >= count) {
+          this.stepsSinceRoundStart = 0;
+          this.grantRoundEnergy();
+        }
 
-    for (let step = 1; step <= count; step++) {
-      const index = (this.turnIndex + step) % count;
-      const player = this.byId.get(this.order[index]);
-      if (player && player.active) {
+        const player = this.byId.get(this.order[index]);
+        if (!player || !player.active) continue;
+
+        if (player.energy < 1) {
+          if (!alreadySkipped.has(player.id)) {
+            alreadySkipped.add(player.id);
+            this.logMessage(
+              'skip',
+              `${player.name} пропускает ход: не хватает энергии`,
+            );
+          }
+          continue;
+        }
+
         this.turnIndex = index;
         return;
       }
+    }
+
+    const fallback = this.players.find((player) => player.active);
+    if (fallback) {
+      fallback.energy = Math.max(fallback.energy, 1);
+      this.turnIndex = this.order.indexOf(fallback.id);
+    }
+  }
+
+  private grantRoundEnergy(): void {
+    for (const player of this.players) {
+      if (player.active) player.energy += ROUND_ENERGY;
     }
   }
 
@@ -457,16 +503,32 @@ export class Game {
     return true;
   }
 
-  private resolveBattle(attacker: GamePlayer, defender: GamePlayer): void {
+  private resolveBattle(
+    attacker: GamePlayer,
+    defender: GamePlayer,
+    attackerActionPaid: boolean,
+  ): void {
     this.pending = null;
 
-    const winner = this.rng() < 0.5 ? attacker : defender;
-    const loser = winner.id === attacker.id ? defender : attacker;
-    loser.skipNext = true;
+    const attackerWins = this.rng() < 0.5;
+    const winner = attackerWins ? attacker : defender;
+    const loser = attackerWins ? defender : attacker;
+
+    if (attackerWins) {
+      if (!attackerActionPaid) attacker.energy -= WIN_COST;
+      defender.energy -= LOSS_COST;
+    } else {
+      defender.energy -= WIN_COST;
+      if (attackerActionPaid) {
+        attacker.energy -= LOSS_COST - WIN_COST;
+      } else {
+        attacker.energy -= LOSS_COST;
+      }
+    }
 
     this.logMessage(
       'battle',
-      `${attacker.name} и ${defender.name} вступили в бой. Победил ${winner.name}, ${loser.name} пропускает ход`,
+      `${attacker.name} и ${defender.name} вступили в бой. Победил ${winner.name} (энергия: ${winner.energy}), ${loser.name} теряет ${LOSS_COST} энергии (энергия: ${loser.energy})`,
     );
 
     this.finishTurn();

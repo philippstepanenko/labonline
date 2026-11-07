@@ -133,6 +133,10 @@
             <div id="exits-info" class="value">—</div>
           </div>
           <div class="stat">
+            <div class="label">Энергия</div>
+            <div id="energy-info" class="value">—</div>
+          </div>
+          <div class="stat">
             <div class="label">Вы</div>
             <div id="you-info" class="value">—</div>
           </div>
@@ -162,7 +166,9 @@
           <button data-dir="right" type="button" aria-label="Вправо">→</button>
         </div>
         <p class="hint muted">
-          Управление: стрелки или WASD. Видно только 8 соседних клеток —
+          Управление: стрелки или WASD. Ход или действие стоит 1 энергию,
+          каждый круг начисляется +1. Проигравший бой теряет 3 энергии; при
+          энергии ниже 1 ход пропускается. Видно только 8 соседних клеток —
           исследованная карта запоминается.
         </p>
       </section>

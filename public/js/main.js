@@ -100,6 +100,7 @@ function handleMessage(message) {
       state.busy = false;
       if (message.reason === 'wall') ui.toast('Туда нельзя: стена');
       if (message.reason === 'notTurn') ui.toast('Сейчас не ваш ход');
+      if (message.reason === 'noEnergy') ui.toast('Не хватает энергии');
       ui.renderControls();
       break;
 

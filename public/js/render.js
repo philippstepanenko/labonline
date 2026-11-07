@@ -79,49 +79,67 @@ export class BoardRenderer {
       }
     }
 
+    const groups = new Map();
     for (const player of current.players) {
       if (!player.pos || player.escaped) continue;
-
-      const centerX = player.pos.x * tile + tile / 2;
-      const centerY = player.pos.y * tile + tile / 2;
-      const hue = hueForId(player.id);
-
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, tile * 0.32, 0, Math.PI * 2);
-      ctx.fillStyle = `hsl(${hue} 70% 52%)`;
-      ctx.fill();
-
-      if (player.id === current.youId) {
-        ctx.lineWidth = Math.max(2, tile * 0.11);
-        ctx.strokeStyle = '#ffffff';
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, tile * 0.43, 0, Math.PI * 2);
-        ctx.lineWidth = 1.5;
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-        ctx.stroke();
+      const key = pointKey(player.pos.x, player.pos.y);
+      const group = groups.get(key);
+      if (group) {
+        group.push(player);
+      } else {
+        groups.set(key, [player]);
       }
+    }
 
-      const initial = (player.name || '?').trim().charAt(0).toUpperCase();
-      ctx.fillStyle = '#08111a';
-      ctx.font = `bold ${Math.max(9, Math.round(tile * 0.42))}px system-ui, sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(initial, centerX, centerY + 1);
+    for (const group of groups.values()) {
+      const count = group.length;
+      const base = group[0].pos;
+      const spacing = tile * 0.22;
+      const radius = count > 1 ? tile * 0.24 : tile * 0.32;
 
-      if (player.skipNext) {
+      group.forEach((player, index) => {
+        const offset = (index - (count - 1) / 2) * spacing;
+        const centerX = base.x * tile + tile / 2 + offset;
+        const centerY = base.y * tile + tile / 2;
+        const hue = hueForId(player.id);
+
         ctx.beginPath();
-        ctx.arc(
-          centerX + tile * 0.3,
-          centerY - tile * 0.3,
-          Math.max(2, tile * 0.09),
-          0,
-          Math.PI * 2,
-        );
-        ctx.fillStyle = '#ffd166';
+        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+        ctx.fillStyle = `hsl(${hue} 70% 52%)`;
         ctx.fill();
-      }
+
+        if (player.id === current.youId) {
+          ctx.lineWidth = Math.max(2, tile * 0.11);
+          ctx.strokeStyle = '#ffffff';
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, radius + tile * 0.11, 0, Math.PI * 2);
+          ctx.lineWidth = 1.5;
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+          ctx.stroke();
+        }
+
+        const initial = (player.name || '?').trim().charAt(0).toUpperCase();
+        ctx.fillStyle = '#08111a';
+        ctx.font = `bold ${Math.max(8, Math.round(radius * 1.3))}px system-ui, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(initial, centerX, centerY + 1);
+
+        if (player.energy < 1) {
+          ctx.beginPath();
+          ctx.arc(
+            centerX + radius,
+            centerY - radius,
+            Math.max(2, tile * 0.09),
+            0,
+            Math.PI * 2,
+          );
+          ctx.fillStyle = '#ff6b6b';
+          ctx.fill();
+        }
+      });
     }
   }
 }

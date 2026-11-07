@@ -188,6 +188,10 @@ describe('WebSocket-сервер', () => {
     }
     expect(firstState.phase).toBe('playing');
     expect(secondState.phase).toBe('playing');
+    expect(firstState.you.energy).toBe(1);
+    expect(secondState.you.energy).toBe(1);
+    expect(firstState.players.every((player) => typeof player.energy === 'number')).toBe(true);
+    expect(secondState.players.every((player) => typeof player.energy === 'number')).toBe(true);
 
     const turnId = firstState.turn?.id;
     expect(turnId).toBeTruthy();

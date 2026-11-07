@@ -148,6 +148,7 @@ export function renderGame() {
     ? `${turn.name}${turn.id === state.youId ? ' (вы)' : ''}`
     : '—';
   $('#exits-info').textContent = String(state.exitsRemaining);
+  $('#energy-info').textContent = state.you ? String(state.you.energy) : '—';
 
   const you = state.you;
   let youText = you ? you.name : '—';
@@ -158,8 +159,8 @@ export function renderGame() {
       youText += ' — ждём ответа';
     } else if (you.pending === 'respond') {
       youText += ' — вам предложили обмен';
-    } else if (you.skipNext) {
-      youText += ' — пропуск следующего хода';
+    } else if (you.energy < 1) {
+      youText += ' — нет энергии, ход пропускается';
     } else if (you.pos && state.phase === 'over') {
       youText += ' — игра окончена';
     }
@@ -175,12 +176,12 @@ function renderPlayers() {
   const list = $('#players-panel');
   list.innerHTML = state.players
     .map((player) => {
-      const tags = [];
+      const tags = [`энергия: ${player.energy}`];
       if (player.id === state.youId) tags.push('вы');
       if (player.isTurn && state.phase === 'playing') tags.push('ходит');
       if (player.escaped) tags.push('сбежал');
       else if (!player.connected) tags.push('отключён');
-      else if (player.skipNext) tags.push('пропуск');
+      else if (player.energy < 1) tags.push('нет энергии');
 
       const classes = [
         player.isTurn && state.phase === 'playing' ? 'current' : '',
@@ -223,6 +224,10 @@ export function showChoiceModal(message, onChoose) {
     <div class="card modal" role="dialog" aria-modal="true">
       <h2>На пути игрок ${escapeHtml(message.targetName)}</h2>
       <p class="muted">Соперник занимает клетку. Что делаем?</p>
+      <p class="muted">
+        Обмен: по 1 энергии каждому. Бой: победитель тратит 1 энергию,
+        проигравший — 3.
+      </p>
       <div class="modal-actions">
         <button type="button" data-action="swap">Поменяться клетками</button>
         <button type="button" data-action="fight" class="danger">Вступить в бой</button>
@@ -245,7 +250,10 @@ export function showSwapModal(message, onRespond) {
   root.innerHTML = `<div class="overlay">
     <div class="card modal" role="dialog" aria-modal="true">
       <h2>${escapeHtml(message.fromName)} предлагает обмен</h2>
-      <p class="muted">Если отказаться, начнётся бой со случайным исходом.</p>
+      <p class="muted">
+        Обмен стоит по 1 энергии каждому. Если отказаться, начнётся бой:
+        победитель тратит 1 энергию, проигравший — 3.
+      </p>
       <div class="modal-actions">
         <button type="button" data-action="accept">Принять обмен</button>
         <button type="button" data-action="decline" class="danger">Отказаться (бой)</button>

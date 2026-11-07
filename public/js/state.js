@@ -84,6 +84,7 @@ export function canMove() {
     state.phase === 'playing' &&
       !state.over &&
       state.you &&
+      state.you.energy >= 1 &&
       state.turn &&
       state.turn.id === state.you.id &&
       !state.you.pending &&
