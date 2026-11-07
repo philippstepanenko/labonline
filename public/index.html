@@ -140,11 +140,24 @@
             <div class="label">Вы</div>
             <div id="you-info" class="value">—</div>
           </div>
+          <div class="stat">
+            <div class="label">Вид</div>
+            <div
+              id="view-toggle"
+              class="view-toggle"
+              role="group"
+              aria-label="Режим отображения"
+            >
+              <button type="button" data-view="2d" aria-pressed="true">2D</button>
+              <button type="button" data-view="3d" aria-pressed="false">3D</button>
+            </div>
+          </div>
         </header>
 
         <main class="board-area">
           <div class="board-wrap">
             <canvas id="board" width="0" height="0"></canvas>
+            <canvas id="board3d" width="0" height="0" hidden></canvas>
           </div>
 
           <aside class="sidebar">
@@ -166,6 +179,7 @@
           <button data-dir="right" type="button" aria-label="Вправо">→</button>
         </div>
         <p class="hint muted">
+          Вид переключается между 2D и 3D кнопками в верхней панели.
           Управление: стрелки или WASD. Ход или действие стоит 1 энергию,
           каждый круг начисляется +1. Проигравший бой теряет 3 энергии и
           становится поверженным: на его клетку можно заступить, пока он

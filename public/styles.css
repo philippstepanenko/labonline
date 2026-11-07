@@ -401,12 +401,49 @@ button.secondary {
   align-items: flex-start;
 }
 
-#board {
+#board,
+#board3d {
   display: block;
   border-radius: 14px;
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
   background: #070a10;
+}
+
+#board3d {
+  width: 100%;
+  max-width: 100%;
+}
+
+.view-toggle {
+  display: inline-flex;
+  margin-top: 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.view-toggle button {
+  border: 0;
+  border-radius: 0;
+  padding: 6px 16px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.view-toggle button + button {
+  border-left: 1px solid var(--border);
+}
+
+.view-toggle button[aria-pressed="true"] {
+  background: linear-gradient(180deg, #2c4a7a, #223a60);
+  color: var(--text);
+}
+
+.view-toggle button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .sidebar {

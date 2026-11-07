@@ -1,4 +1,5 @@
 import { pointKey, hueForId, state } from './state.js';
+import { BOARD_BACKGROUND, tileColor } from './palette.js';
 
 const MAX_TILE = 30;
 const MIN_TILE = 10;
@@ -7,6 +8,20 @@ export class BoardRenderer {
   constructor(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
+  }
+
+  resize() {
+    this.draw();
+  }
+
+  reset() {
+    const ctx = this.ctx;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+  }
+
+  dispose() {
+    this.reset();
   }
 
   draw(current = state) {
@@ -44,7 +59,7 @@ export class BoardRenderer {
     const ctx = this.ctx;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, cssWidth, cssHeight);
-    ctx.fillStyle = '#070a10';
+    ctx.fillStyle = BOARD_BACKGROUND;
     ctx.fillRect(0, 0, cssWidth, cssHeight);
 
     for (let y = 0; y < height; y++) {
@@ -53,14 +68,7 @@ export class BoardRenderer {
         const cell = current.known.get(key);
         const visible = current.visibleNow.has(key);
 
-        let fill = '#070a10';
-        if (cell === 'wall') {
-          fill = visible ? '#3a465e' : '#202839';
-        } else if (cell === 'floor') {
-          fill = visible ? '#20293a' : '#111722';
-        } else if (cell === 'exit') {
-          fill = visible ? '#33cc7a' : '#1d6b42';
-        }
+        const fill = cell ? tileColor(cell, visible) : BOARD_BACKGROUND;
 
         ctx.fillStyle = fill;
         ctx.fillRect(x * tile, y * tile, tile, tile);

@@ -1,9 +1,14 @@
 import { createConnection } from './net.js';
 import { state, resetForStart, applyState, canMove } from './state.js';
-import { BoardRenderer } from './render.js';
+import { ViewManager } from './view.js';
 import * as ui from './ui.js';
 
-const renderer = new BoardRenderer(document.querySelector('#board'));
+const view = new ViewManager({
+  canvas2d: document.querySelector('#board'),
+  canvas3d: document.querySelector('#board3d'),
+  toggleRoot: document.querySelector('#view-toggle'),
+});
+view.attach();
 const joinButton = document.querySelector('#join-form button[type="submit"]');
 const createButton = document.querySelector(
   '#create-room-form button[type="submit"]',
@@ -61,14 +66,15 @@ function handleMessage(message) {
       ui.closeModal();
       ui.setScreen('game');
       ui.renderGame();
-      renderer.draw();
+      view.reset();
+      view.draw();
       break;
 
     case 'state':
       applyState(message);
       if (state.you) state.youId = state.you.id;
       ui.renderGame();
-      renderer.draw();
+      view.draw();
       break;
 
     case 'chooseAction':
@@ -109,7 +115,7 @@ function handleMessage(message) {
       state.over = message;
       state.busy = false;
       ui.renderGame();
-      renderer.draw();
+      view.draw();
       ui.showGameOver(message, () => {
         connection.send({ type: 'backToLobby' });
       });
@@ -252,6 +258,6 @@ window.addEventListener('keydown', (event) => {
 
 window.addEventListener('resize', () => {
   if (state.screen === 'game') {
-    renderer.draw();
+    view.resize();
   }
 });
