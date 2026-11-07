@@ -127,7 +127,7 @@ export class BoardRenderer {
         ctx.textBaseline = 'middle';
         ctx.fillText(initial, centerX, centerY + 1);
 
-        if (player.energy < 1) {
+        if (player.defeated && player.energy < 1) {
           ctx.beginPath();
           ctx.arc(
             centerX + radius,

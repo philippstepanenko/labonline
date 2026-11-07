@@ -159,6 +159,8 @@ export function renderGame() {
       youText += ' — ждём ответа';
     } else if (you.pending === 'respond') {
       youText += ' — вам предложили обмен';
+    } else if (you.defeated && you.energy < 1) {
+      youText += ' — повержен, ход пропускается';
     } else if (you.energy < 1) {
       youText += ' — нет энергии, ход пропускается';
     } else if (you.pos && state.phase === 'over') {
@@ -181,6 +183,7 @@ function renderPlayers() {
       if (player.isTurn && state.phase === 'playing') tags.push('ходит');
       if (player.escaped) tags.push('сбежал');
       else if (!player.connected) tags.push('отключён');
+      else if (player.defeated && player.energy < 1) tags.push('повержен');
       else if (player.energy < 1) tags.push('нет энергии');
 
       const classes = [

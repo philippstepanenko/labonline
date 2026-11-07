@@ -38,7 +38,8 @@ export interface StatePlayer {
   escaped: boolean;
   active: boolean;
   connected: boolean;
-   energy: number;
+  energy: number;
+  defeated: boolean;
   isTurn: boolean;
   pos?: Point;
 }
@@ -60,6 +61,7 @@ export interface StateMessage {
     name: string;
     pos: Point;
     energy: number;
+    defeated: boolean;
     pending: PendingRole;
   };
   visible: VisibleArea;

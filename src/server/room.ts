@@ -150,6 +150,7 @@ export class Room {
       active: false,
       escaped: false,
       energy: 0,
+      defeated: false,
       ready: false,
       pos: { x: 0, y: 0 },
     };
@@ -393,6 +394,7 @@ export class Room {
       player.active = false;
       player.escaped = false;
       player.energy = 0;
+      player.defeated = false;
       player.pos = { x: 0, y: 0 };
     }
 

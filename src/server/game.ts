@@ -36,6 +36,7 @@ export interface GamePlayer {
   active: boolean;
   escaped: boolean;
   energy: number;
+  defeated: boolean;
   pos: Point;
 }
 
@@ -51,7 +52,6 @@ export interface GameOptions {
   order: string[];
   maze: Maze;
   rng?: RNG;
-  startEnergy?: number;
   onOver?: (escaped: string[], losers: string[]) => void;
 }
 
@@ -63,6 +63,7 @@ export interface DebugPlayer {
   escaped: boolean;
   connected: boolean;
   energy: number;
+  defeated: boolean;
 }
 
 export interface DebugState {
@@ -84,7 +85,6 @@ export class Game {
   private readonly byId = new Map<string, GamePlayer>();
   private readonly order: string[];
   private readonly rng: RNG;
-  private readonly startEnergy: number;
   private readonly onOver?: (escaped: string[], losers: string[]) => void;
 
   private turnIndex = 0;
@@ -101,7 +101,6 @@ export class Game {
     this.players = options.players;
     this.order = [...options.order];
     this.rng = options.rng ?? Math.random;
-    this.startEnergy = options.startEnergy ?? START_ENERGY;
     this.onOver = options.onOver;
     this.startCount = this.order.length;
 
@@ -109,7 +108,8 @@ export class Game {
       this.byId.set(player.id, player);
       player.active = true;
       player.escaped = false;
-      player.energy = this.startEnergy;
+      player.energy = START_ENERGY;
+      player.defeated = false;
     }
 
     this.order.forEach((id, index) => {
@@ -173,7 +173,9 @@ export class Game {
     }
 
     const occupants = this.activePlayersAt(target.x, target.y);
-    const blocker = occupants.find((occupant) => occupant.energy >= 1);
+    const blocker = occupants.find(
+      (occupant) => !(occupant.defeated && occupant.energy < 1),
+    );
     if (blocker) {
       this.pending = {
         initiatorId: player.id,
@@ -343,6 +345,7 @@ export class Game {
         active: other.active,
         connected: other.connected,
         energy: other.energy,
+        defeated: other.defeated,
         isTurn: this.currentPlayerId === other.id,
         ...(showPosition ? { pos: { ...other.pos } } : {}),
       };
@@ -364,6 +367,7 @@ export class Game {
         name: player.name,
         pos: { ...player.pos },
         energy: player.energy,
+        defeated: player.defeated,
         pending: this.pendingRoleFor(player),
       },
       visible,
@@ -386,6 +390,7 @@ export class Game {
         escaped: player.escaped,
         connected: player.connected,
         energy: player.energy,
+        defeated: player.defeated,
       })),
       exitsRemaining: this.exits.size,
     };
@@ -449,6 +454,7 @@ export class Game {
           continue;
         }
 
+        if (player.defeated) player.defeated = false;
         this.turnIndex = index;
         return;
       }
@@ -463,7 +469,9 @@ export class Game {
 
   private grantRoundEnergy(): void {
     for (const player of this.players) {
-      if (player.active) player.energy += ROUND_ENERGY;
+      if (!player.active) continue;
+      player.energy += ROUND_ENERGY;
+      if (player.defeated && player.energy >= 1) player.defeated = false;
     }
   }
 
@@ -525,6 +533,8 @@ export class Game {
         attacker.energy -= LOSS_COST;
       }
     }
+
+    loser.defeated = true;
 
     this.logMessage(
       'battle',
