@@ -190,6 +190,7 @@ form label {
 #ready-button {
   width: 100%;
   padding: 12px 16px;
+  margin-top: 10px;
 }
 
 .players-list {
