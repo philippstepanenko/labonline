@@ -36,6 +36,11 @@ export function hueForId(id) {
   return hash % 360;
 }
 
+export function hueForPlayer(player) {
+  if (player && Number.isFinite(player.hue)) return player.hue;
+  return hueForId(player && player.id ? player.id : '');
+}
+
 export function resetForStart(message) {
   state.youId = message.youId;
   state.phase = 'playing';

@@ -37,6 +37,8 @@ function isClientMessage(value: unknown): value is ClientMessage {
       return true;
     case 'setMazeSize':
       return typeof value.width === 'number' && typeof value.height === 'number';
+    case 'setColor':
+      return typeof value.hue === 'number';
     case 'ready':
       return typeof value.value === 'boolean';
     case 'move':

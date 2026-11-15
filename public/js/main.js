@@ -208,6 +208,12 @@ document.querySelector('#maze-size-form').addEventListener('submit', (event) => 
   ensureConnection().send({ type: 'setMazeSize', width, height });
 });
 
+document.querySelector('#color-options').addEventListener('click', (event) => {
+  const button = event.target.closest('button[data-hue]');
+  if (!button || button.disabled) return;
+  ensureConnection().send({ type: 'setColor', hue: Number(button.dataset.hue) });
+});
+
 document.querySelector('#ready-button').addEventListener('click', () => {
   const me = state.lobby
     ? state.lobby.players.find((player) => player.id === state.youId)

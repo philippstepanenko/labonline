@@ -9,9 +9,10 @@ interface SentMessage {
 }
 
 function makePlayers(ids: string[], sent: SentMessage[]): GamePlayer[] {
-  return ids.map((id) => ({
+  return ids.map((id, index) => ({
     id,
     name: id.toUpperCase(),
+    hue: index * 20,
     send: (message) => sent.push({ id, message }),
     connected: true,
     active: false,
@@ -499,6 +500,8 @@ describe('Game: туман войны', () => {
 
     expect(otherFromFirst?.pos).toBeUndefined();
     expect(otherFromSecond?.pos).toBeUndefined();
+    expect(otherFromFirst?.hue).toBe(20);
+    expect(otherFromSecond?.hue).toBe(0);
     expect(otherFromFirst?.energy).toBe(1);
     expect(otherFromSecond?.energy).toBe(1);
     expect(otherFromFirst?.defeated).toBe(false);

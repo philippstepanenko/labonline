@@ -1,7 +1,7 @@
 import * as THREE from '../vendor/three.module.min.js';
 import { BOARD_BACKGROUND, TILE_COLORS } from './palette.js';
 import { collectTiles, groupPlayers, tileToWorld } from './render3d-model.js';
-import { hueForId } from './state.js';
+import { hueForPlayer } from './state.js';
 
 const WALL_HEIGHT = 0.5;
 const FLOOR_THICKNESS = 0.08;
@@ -249,7 +249,7 @@ export class ThreeRenderer {
     for (const entry of entries) {
       const { player, offsetX, isYou } = entry;
       const world = tileToWorld(player.pos.x, player.pos.y, width, height);
-      const hue = hueForId(player.id);
+      const hue = hueForPlayer(player);
       const group = new THREE.Group();
       group.position.set(world.x + offsetX, 0, world.z);
 
