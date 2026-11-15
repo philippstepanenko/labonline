@@ -1,4 +1,4 @@
-import { pointKey, hueForId, state } from './state.js';
+import { pointKey, hueForPlayer, state } from './state.js';
 import { BOARD_BACKGROUND, tileColor } from './palette.js';
 
 const MAX_TILE = 30;
@@ -109,7 +109,7 @@ export class BoardRenderer {
         const offset = (index - (count - 1) / 2) * spacing;
         const centerX = base.x * tile + tile / 2 + offset;
         const centerY = base.y * tile + tile / 2;
-        const hue = hueForId(player.id);
+        const hue = hueForPlayer(player);
 
         ctx.beginPath();
         ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);

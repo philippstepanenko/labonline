@@ -11,6 +11,7 @@ export interface Point {
 export interface LobbyPlayer {
   id: string;
   name: string;
+  hue: number;
   ready: boolean;
   connected: boolean;
 }
@@ -35,6 +36,7 @@ export interface NamedPlayer {
 export interface StatePlayer {
   id: string;
   name: string;
+  hue: number;
   escaped: boolean;
   active: boolean;
   connected: boolean;
@@ -84,6 +86,7 @@ export type ClientMessage =
   | { type: 'joinRoom'; name: string; roomId: string }
   | { type: 'leaveRoom' }
   | { type: 'setMazeSize'; width: number; height: number }
+  | { type: 'setColor'; hue: number }
   | { type: 'ready'; value: boolean }
   | { type: 'move'; dir: Dir }
   | { type: 'chooseAction'; action: 'swap' | 'fight' }

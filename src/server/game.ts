@@ -31,6 +31,7 @@ const MAX_ADVANCE_ROUNDS = 1000;
 export interface GamePlayer {
   id: string;
   name: string;
+  hue: number;
   send: SendFn;
   connected: boolean;
   active: boolean;
@@ -341,6 +342,7 @@ export class Game {
       return {
         id: other.id,
         name: other.name,
+        hue: other.hue,
         escaped: other.escaped,
         active: other.active,
         connected: other.connected,

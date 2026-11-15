@@ -1,5 +1,6 @@
 import { randomInt } from 'node:crypto';
 import { normalizeMazeSize, type Config } from '../shared/config';
+import { isPlayerHue, pickFreeHue } from '../shared/colors';
 import type {
   ClientMessage,
   Dir,
@@ -145,6 +146,7 @@ export class Room {
     const player: RoomPlayer = {
       id,
       name: trimmed,
+      hue: pickFreeHue([...this.players.values()].map((existing) => existing.hue)),
       send,
       connected: true,
       active: false,
@@ -237,6 +239,57 @@ export class Room {
     return { ok: true };
   }
 
+  setColor(id: string, hue: number): RoomActionResult {
+    if (this.phase !== 'lobby') {
+      return {
+        ok: false,
+        code: 'game_running',
+        message: 'Цвет можно менять только в лобби',
+      };
+    }
+
+    const player = this.players.get(id);
+    if (!player) {
+      return {
+        ok: false,
+        code: 'not_in_room',
+        message: 'Игрок не найден в комнате',
+      };
+    }
+
+    if (!isPlayerHue(hue)) {
+      return {
+        ok: false,
+        code: 'bad_color',
+        message: 'Такой цвет недоступен',
+      };
+    }
+
+    if (player.hue === hue) return { ok: true };
+
+    if (player.ready) {
+      return {
+        ok: false,
+        code: 'already_ready',
+        message: 'Сначала отмените готовность',
+      };
+    }
+
+    for (const other of this.players.values()) {
+      if (other.id !== id && other.connected && other.hue === hue) {
+        return {
+          ok: false,
+          code: 'color_taken',
+          message: 'Этот цвет уже выбрал другой игрок',
+        };
+      }
+    }
+
+    player.hue = hue;
+    this.broadcastLobby();
+    return { ok: true };
+  }
+
   handleMessage(id: string, message: ClientMessage): void {
     const player = this.players.get(id);
     if (!player) return;
@@ -244,6 +297,18 @@ export class Room {
     switch (message.type) {
       case 'setMazeSize': {
         const result = this.setMazeSize(id, message.width, message.height);
+        if (!result.ok) {
+          this.sendTo(player, {
+            type: 'error',
+            code: result.code,
+            message: result.message,
+          });
+        }
+        return;
+      }
+
+      case 'setColor': {
+        const result = this.setColor(id, message.hue);
         if (!result.ok) {
           this.sendTo(player, {
             type: 'error',
@@ -422,6 +487,7 @@ export class Room {
       .map((player) => ({
         id: player.id,
         name: player.name,
+        hue: player.hue,
         ready: player.ready,
         connected: player.connected,
       }));

@@ -2,6 +2,7 @@ import type { AddressInfo } from 'node:net';
 import { afterEach, describe, expect, it } from 'vitest';
 import { WebSocket } from 'ws';
 import { createServer, type RunningServer } from '../src/server/server';
+import { PLAYER_HUES } from '../src/shared/colors';
 import type { ServerMessage } from '../src/shared/protocol';
 
 class TestClient {
@@ -196,6 +197,10 @@ describe('WebSocket-сервер', () => {
     expect(secondState.players.every((player) => typeof player.energy === 'number')).toBe(true);
     expect(firstState.players.every((player) => player.defeated === false)).toBe(true);
     expect(secondState.players.every((player) => player.defeated === false)).toBe(true);
+    expect(firstState.players.every((player) => typeof player.hue === 'number')).toBe(true);
+    expect(secondState.players.every((player) => typeof player.hue === 'number')).toBe(true);
+    expect(new Set(firstState.players.map((player) => player.hue)).size).toBe(2);
+    expect(new Set(secondState.players.map((player) => player.hue)).size).toBe(2);
 
     const turnId = firstState.turn?.id;
     expect(turnId).toBeTruthy();
@@ -307,6 +312,94 @@ describe('WebSocket-сервер', () => {
     );
     if (rooms.type !== 'rooms') throw new Error('Ожидался rooms');
     expect(rooms.rooms).toEqual([]);
+  });
+
+  it('позволяет выбирать уникальный цвет в лобби и передаёт его в игру', async () => {
+    const url = await startServer();
+
+    const first = await connect(url);
+    const second = await connect(url);
+    clients.push(first, second);
+
+    const { welcome, lobby } = await createRoom(first, 'Аня', 9, 9);
+    const firstId = welcome.youId;
+    const firstPlayer = lobby.players.find((player) => player.id === firstId);
+    expect(firstPlayer).toBeDefined();
+    expect(PLAYER_HUES).toContain(firstPlayer!.hue);
+
+    second.send({ type: 'joinRoom', name: 'Боря', roomId: welcome.roomId });
+    const secondWelcome = await second.waitFor(
+      (message) => message.type === 'welcome',
+    );
+    if (secondWelcome.type !== 'welcome') throw new Error('Ожидался welcome');
+
+    const joined = await second.waitFor(
+      (message) => message.type === 'lobby' && message.players.length === 2,
+    );
+    if (joined.type !== 'lobby') throw new Error('Ожидался lobby');
+    expect(new Set(joined.players.map((player) => player.hue)).size).toBe(2);
+
+    const used = new Set(joined.players.map((player) => player.hue));
+    const targetHue = PLAYER_HUES.find((hue) => !used.has(hue));
+    if (targetHue === undefined) throw new Error('Нет свободного цвета');
+
+    first.send({ type: 'setColor', hue: targetHue });
+    const updatedFirst = await first.waitFor(
+      (message) =>
+        message.type === 'lobby' &&
+        message.players.find((player) => player.id === firstId)?.hue ===
+          targetHue,
+    );
+    const updatedSecond = await second.waitFor(
+      (message) =>
+        message.type === 'lobby' &&
+        message.players.find((player) => player.id === firstId)?.hue ===
+          targetHue,
+    );
+    expect(updatedFirst.type).toBe('lobby');
+    expect(updatedSecond.type).toBe('lobby');
+
+    second.send({ type: 'setColor', hue: targetHue });
+    const taken = await second.waitFor(
+      (message) => message.type === 'error',
+    );
+    if (taken.type !== 'error') throw new Error('Ожидался error');
+    expect(taken.code).toBe('color_taken');
+
+    second.send({ type: 'setColor', hue: 7 });
+    const badColor = await second.waitFor(
+      (message) => message.type === 'error',
+    );
+    if (badColor.type !== 'error') throw new Error('Ожидался error');
+    expect(badColor.code).toBe('bad_color');
+
+    first.send({ type: 'ready', value: true });
+    await first.waitFor(
+      (message) =>
+        message.type === 'lobby' &&
+        message.players.find((player) => player.id === firstId)?.ready === true,
+    );
+
+    const lockedHue = PLAYER_HUES.find(
+      (hue) => !used.has(hue) && hue !== targetHue,
+    );
+    if (lockedHue === undefined) throw new Error('Нет свободного цвета');
+
+    first.send({ type: 'setColor', hue: lockedHue });
+    const locked = await first.waitFor(
+      (message) => message.type === 'error',
+    );
+    if (locked.type !== 'error') throw new Error('Ожидался error');
+    expect(locked.code).toBe('already_ready');
+
+    second.send({ type: 'ready', value: true });
+    await first.waitFor((message) => message.type === 'start');
+    const state = await first.waitFor((message) => message.type === 'state');
+    if (state.type !== 'state') throw new Error('Ожидался state');
+    expect(
+      state.players.find((player) => player.id === firstId)?.hue,
+    ).toBe(targetHue);
+    expect(new Set(state.players.map((player) => player.hue)).size).toBe(2);
   });
 
   it('запрещает входить в комнату во время игры', async () => {

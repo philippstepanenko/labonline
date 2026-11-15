@@ -1,4 +1,5 @@
-import { state, canMove, hueForId } from './state.js';
+import { state, canMove, hueForPlayer } from './state.js';
+import { PLAYER_COLORS, playerColorName } from './palette.js';
 
 const ESCAPE_MAP = {
   '&': '&amp;',
@@ -114,11 +115,14 @@ export function renderLobby(message) {
       const isYou = player.id === state.youId;
       const isOwner = player.id === message.ownerId;
       return `<li class="${player.ready ? 'ready' : ''}">
+        <span class="dot" style="--hue: ${hueForPlayer(player)}"></span>
         <span class="player-name">${escapeHtml(player.name)}${isYou ? ' <span class="you-tag">вы</span>' : ''}${isOwner ? ' <span class="you-tag">владелец</span>' : ''}</span>
         <span class="badge ${player.ready ? 'badge-ready' : ''}">${player.ready ? 'готов' : 'ждём'}</span>
       </li>`;
     })
     .join('');
+
+  renderColorPicker(message);
 
   const me = message.players.find((player) => player.id === state.youId);
   const ready = Boolean(me && me.ready);
@@ -139,6 +143,43 @@ export function renderLobby(message) {
     hint.textContent = `Нужно минимум ${message.minPlayers} игроков. Нажмите «Готов», когда будете готовы.`;
   } else {
     hint.textContent = 'Ждём остальных игроков…';
+  }
+}
+
+function renderColorPicker(message) {
+  const me = message.players.find((player) => player.id === state.youId);
+  const canPick = Boolean(me) && !me.ready;
+
+  const options = $('#color-options');
+  options.innerHTML = PLAYER_COLORS.map((color) => {
+    const selected = Boolean(me && me.hue === color.hue);
+    const owner = message.players.find(
+      (player) => player.id !== state.youId && player.hue === color.hue,
+    );
+    const disabled = !canPick || Boolean(owner);
+    const label = owner
+      ? `${color.name} — занят игроком ${owner.name}`
+      : color.name;
+
+    return `<button
+      type="button"
+      class="swatch"
+      data-hue="${color.hue}"
+      style="--hue: ${color.hue}"
+      title="${escapeHtml(label)}"
+      aria-label="${escapeHtml(label)}"
+      aria-pressed="${selected ? 'true' : 'false'}"
+      ${disabled ? 'disabled' : ''}
+    ></button>`;
+  }).join('');
+
+  const status = $('#color-status');
+  if (!me) {
+    status.textContent = 'Выберите цвет персонажа.';
+  } else if (me.ready) {
+    status.textContent = `Ваш цвет: ${playerColorName(me.hue)}. Чтобы сменить цвет, отмените готовность.`;
+  } else {
+    status.textContent = `Ваш цвет: ${playerColorName(me.hue)}.`;
   }
 }
 
@@ -195,7 +236,7 @@ function renderPlayers() {
         .join(' ');
 
       return `<li class="${classes}">
-        <span class="dot" style="--hue: ${hueForId(player.id)}"></span>
+        <span class="dot" style="--hue: ${hueForPlayer(player)}"></span>
         <span class="player-name">${escapeHtml(player.name)}</span>
         <span class="tags">${tags.join(' · ')}</span>
       </li>`;
