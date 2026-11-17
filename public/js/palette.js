@@ -1,4 +1,5 @@
 export const BOARD_BACKGROUND = '#070a10';
+export const WALL_EDGE = 'rgba(173, 199, 240, 0.16)';
 
 export const PLAYER_COLORS = [
   { hue: 0, name: 'Красный' },
@@ -29,16 +30,20 @@ export function playerColorName(hue) {
 
 export const TILE_COLORS = {
   wall: {
-    remembered: '#202839',
-    visible: '#3a465e',
+    remembered: '#2b3a58',
+    visible: '#5f7bac',
   },
   floor: {
-    remembered: '#111722',
-    visible: '#20293a',
+    remembered: '#10151c',
+    visible: '#232d3a',
   },
   exit: {
     remembered: '#1d6b42',
     visible: '#33cc7a',
+  },
+  exitUsed: {
+    remembered: '#5c1a1a',
+    visible: '#ff4d4d',
   },
 };
 

@@ -82,6 +82,7 @@ export class Game {
 
   private readonly walls: boolean[][];
   private readonly exits: Set<string>;
+  private readonly usedExits = new Set<string>();
   private readonly players: GamePlayer[];
   private readonly byId = new Map<string, GamePlayer>();
   private readonly order: string[];
@@ -330,6 +331,7 @@ export class Game {
         height: this.height,
         walls: this.walls,
         exits: this.exits,
+        usedExits: this.usedExits,
       },
       player.pos,
     );
@@ -414,6 +416,7 @@ export class Game {
     player.escaped = true;
     player.active = false;
     this.exits.delete(cellKey(player.pos.x, player.pos.y));
+    this.usedExits.add(cellKey(player.pos.x, player.pos.y));
     this.logMessage('escape', `${player.name} нашёл выход и сбежал!`);
   }
 

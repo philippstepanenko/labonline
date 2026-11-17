@@ -8,6 +8,7 @@ export interface VisibleWorld {
   height: number;
   walls: boolean[][];
   exits: Set<string>;
+  usedExits: Set<string>;
 }
 
 export function isWithinSight(center: Point, target: Point): boolean {
@@ -32,6 +33,8 @@ export function computeVisible(world: VisibleWorld, pos: Point): VisibleArea {
       if (world.exits.has(cellKey(x, y))) {
         row.push('E');
         exits.push([x, y]);
+      } else if (world.usedExits.has(cellKey(x, y))) {
+        row.push('X');
       } else {
         row.push(world.walls[y][x] ? '#' : '.');
       }

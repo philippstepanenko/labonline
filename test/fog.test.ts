@@ -10,6 +10,7 @@ const world = {
   height: 5,
   walls,
   exits: new Set(['2,1', '4,4']),
+  usedExits: new Set<string>(),
 };
 
 describe('computeVisible', () => {
@@ -36,6 +37,16 @@ describe('computeVisible', () => {
     const visible = computeVisible(world, { x: 3, y: 3 });
     expect(visible.exits).toEqual([[4, 4]]);
     expect(visible.exits).not.toContainEqual([2, 1]);
+  });
+
+  it('показывает использованный выход отдельной клеткой', () => {
+    const visible = computeVisible(
+      { ...world, usedExits: new Set(['2,2']) },
+      { x: 2, y: 2 },
+    );
+
+    expect(visible.cells[1][1]).toBe('X');
+    expect(visible.exits).not.toContainEqual([2, 2]);
   });
 });
 

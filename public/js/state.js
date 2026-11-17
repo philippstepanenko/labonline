@@ -77,7 +77,14 @@ export function applyState(message) {
       const x = origin.x + dx;
       const y = origin.y + dy;
       const cell = row[dx];
-      const type = cell === 'E' ? 'exit' : cell === '#' ? 'wall' : 'floor';
+      const type =
+        cell === 'E'
+          ? 'exit'
+          : cell === 'X'
+            ? 'exitUsed'
+            : cell === '#'
+              ? 'wall'
+              : 'floor';
       state.known.set(pointKey(x, y), type);
       state.visibleNow.add(pointKey(x, y));
     }

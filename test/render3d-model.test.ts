@@ -25,14 +25,16 @@ describe('collectTiles', () => {
         ['0,0', 'wall'],
         ['1,0', 'floor'],
         ['2,0', 'exit'],
+        ['3,0', 'exitUsed'],
       ]),
-      visibleNow: new Set(['1,0', '2,0']),
+      visibleNow: new Set(['1,0', '2,0', '3,0']),
     };
 
     expect(collectTiles(current)).toEqual([
       { x: 0, y: 0, type: 'wall', visible: false },
       { x: 1, y: 0, type: 'floor', visible: true },
       { x: 2, y: 0, type: 'exit', visible: true },
+      { x: 3, y: 0, type: 'exitUsed', visible: true },
     ]);
   });
 

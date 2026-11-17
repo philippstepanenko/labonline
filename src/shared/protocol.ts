@@ -1,5 +1,5 @@
 export type Dir = 'up' | 'down' | 'left' | 'right';
-export type CellChar = '#' | '.' | 'E';
+export type CellChar = '#' | '.' | 'E' | 'X';
 export type GamePhase = 'lobby' | 'playing' | 'over';
 export type PendingRole = 'choose' | 'wait' | 'respond' | null;
 

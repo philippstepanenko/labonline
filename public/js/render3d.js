@@ -40,7 +40,7 @@ export class ThreeRenderer {
 
     this.floorGeometry = new THREE.BoxGeometry(1, FLOOR_THICKNESS, 1);
     this.wallGeometry = new THREE.BoxGeometry(1, WALL_HEIGHT, 1);
-    this.exitGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.08, 24);
+    this.exitGeometry = new THREE.BoxGeometry(0.55, 0.08, 0.55);
     this.playerGeometry = new THREE.CapsuleGeometry(
       PLAYER_RADIUS,
       PLAYER_LENGTH,
@@ -76,6 +76,18 @@ export class ThreeRenderer {
         visible: new THREE.MeshLambertMaterial({
           color: TILE_COLORS.exit.visible,
           emissive: TILE_COLORS.exit.visible,
+          emissiveIntensity: 0.6,
+        }),
+      },
+      exitUsed: {
+        remembered: new THREE.MeshLambertMaterial({
+          color: TILE_COLORS.exitUsed.remembered,
+          emissive: TILE_COLORS.exitUsed.remembered,
+          emissiveIntensity: 0.25,
+        }),
+        visible: new THREE.MeshLambertMaterial({
+          color: TILE_COLORS.exitUsed.visible,
+          emissive: TILE_COLORS.exitUsed.visible,
           emissiveIntensity: 0.6,
         }),
       },
@@ -224,10 +236,10 @@ export class ThreeRenderer {
       return mesh;
     }
 
-    if (type === 'exit') {
+    if (type === 'exit' || type === 'exitUsed') {
       const mesh = new THREE.Mesh(
         this.exitGeometry,
-        this.tileMaterials.exit.remembered,
+        this.tileMaterials[type].remembered,
       );
       mesh.userData.baseY = 0.04;
       return mesh;
