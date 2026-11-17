@@ -1,5 +1,5 @@
 import { pointKey, hueForPlayer, state } from './state.js';
-import { BOARD_BACKGROUND, tileColor } from './palette.js';
+import { BOARD_BACKGROUND, tileColor, WALL_EDGE } from './palette.js';
 
 const MAX_TILE = 30;
 const MIN_TILE = 10;
@@ -79,6 +79,12 @@ export class BoardRenderer {
         ctx.fillRect(x * tile, y * tile, tile, tile);
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.035)';
         ctx.strokeRect(x * tile + 0.5, y * tile + 0.5, tile - 1, tile - 1);
+
+        if (cell === 'wall') {
+          ctx.lineWidth = 1;
+          ctx.strokeStyle = WALL_EDGE;
+          ctx.strokeRect(x * tile + 1, y * tile + 1, tile - 2, tile - 2);
+        }
 
         if (isExit) {
           const size = tile * 0.55;
