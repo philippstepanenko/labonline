@@ -52,6 +52,8 @@ function isClientMessage(value: unknown): value is ClientMessage {
       return value.action === 'swap' || value.action === 'fight';
     case 'respondSwap':
       return typeof value.accept === 'boolean';
+    case 'pong':
+      return true;
     case 'backToLobby':
       return true;
     default:
@@ -79,6 +81,20 @@ export function createServer(
   const manager = new RoomManager(config, broadcastRooms);
   const server = http.createServer(createStaticHandler(publicDir));
   const wss = new WebSocketServer({ server });
+
+  const heartbeatTimer = setInterval(() => {
+    const message: ServerMessage = { type: 'ping' };
+    const data = JSON.stringify(message);
+    for (const socket of wss.clients) {
+      if (socket.readyState !== WebSocket.OPEN) continue;
+      try {
+        socket.send(data);
+      } catch {
+        // Сокет мог закрыться между проверкой и отправкой.
+      }
+    }
+  }, config.heartbeatIntervalMs);
+  heartbeatTimer.unref?.();
 
   wss.on('connection', (socket) => {
     const id = randomUUID();
@@ -115,6 +131,8 @@ export function createServer(
         });
         return;
       }
+
+      if (parsed.type === 'pong') return;
 
       if (!joined) {
         switch (parsed.type) {
@@ -215,6 +233,7 @@ export function createServer(
 
   const close = (): Promise<void> =>
     new Promise((resolve) => {
+      clearInterval(heartbeatTimer);
       for (const client of wss.clients) {
         client.terminate();
       }

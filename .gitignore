@@ -1,6 +1,7 @@
 .idea/
 node_modules/
 dist/
+public/vendor/
 .env
 *.log
 .DS_Store

@@ -91,6 +91,7 @@ export type ClientMessage =
   | { type: 'move'; dir: Dir }
   | { type: 'chooseAction'; action: 'swap' | 'fight' }
   | { type: 'respondSwap'; accept: boolean }
+  | { type: 'pong' }
   | { type: 'backToLobby' };
 
 export type ServerMessage =
@@ -135,6 +136,7 @@ export type ServerMessage =
       reason: 'wall' | 'notTurn' | 'pending' | 'noEnergy';
     }
   | { type: 'gameOver'; escaped: string[]; losers: string[] }
+  | { type: 'ping' }
   | { type: 'error'; code: string; message: string };
 
 export type SendFn = (message: ServerMessage) => void;

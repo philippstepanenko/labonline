@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { WebSocket } from 'ws';
 import { createServer, type RunningServer } from '../src/server/server';
 import { PLAYER_HUES } from '../src/shared/colors';
+import type { Config } from '../src/shared/config';
 import type { ServerMessage } from '../src/shared/protocol';
 
 class TestClient {
@@ -94,12 +95,13 @@ describe('WebSocket-сервер', () => {
     }
   });
 
-  async function startServer(): Promise<string> {
+  async function startServer(overrides: Partial<Config> = {}): Promise<string> {
     running = createServer({
       maxPlayers: 2,
       minPlayers: 2,
       mazeWidth: 9,
       mazeHeight: 9,
+      ...overrides,
     });
 
     await new Promise<void>((resolve) => {
@@ -427,5 +429,23 @@ describe('WebSocket-сервер', () => {
     );
     if (rejected.type !== 'error') throw new Error('Ожидался error');
     expect(rejected.code).toBe('game_running');
+  });
+
+  it('шлёт heartbeat и не закрывает сокет без ответа pong', async () => {
+    const url = await startServer({ heartbeatIntervalMs: 20 });
+    const client = await connect(url);
+    clients.push(client);
+
+    await client.waitFor((message) => message.type === 'ping');
+
+    await new Promise((resolve) => setTimeout(resolve, 80));
+
+    expect(client.socket.readyState).toBe(WebSocket.OPEN);
+
+    client.send({ type: 'pong' });
+
+    await new Promise((resolve) => setTimeout(resolve, 40));
+
+    expect(client.socket.readyState).toBe(WebSocket.OPEN);
   });
 });
