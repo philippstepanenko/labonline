@@ -20,6 +20,8 @@ function ensureConnection() {
   connection = createConnection({
     onMessage: handleMessage,
     onClose: () => ui.showConnectionLost(),
+    onStale: () =>
+      ui.toast('Соединение нестабильно, ждём ответа сервера…'),
   });
   return connection;
 }

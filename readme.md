@@ -13,7 +13,7 @@ npm run dev
 
 В игровом экране есть переключатель вида. По умолчанию включён 2D; 3D — изометрический режим на Three.js. Выбор запоминается в `localStorage`, при недоступном WebGL игра остаётся в 2D.
 
-Three.js вендорится локально в `public/vendor/three.module.min.js`. Чтобы обновить версию:
+Three.js вендорится локально в `public/vendor/three.module.min.js`. Копирование выполняется автоматически при `npm install` (postinstall) и `npm run build` (prebuild). Чтобы обновить версию:
 
 ```bash
 npm install --save-dev three@<версия>

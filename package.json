@@ -5,13 +5,15 @@
   "description": "Сетевая игра «Побег из лабиринта»",
   "main": "dist/server/index.js",
   "scripts": {
+    "postinstall": "npm run vendor:three",
     "dev": "tsx watch src/server/index.ts",
+    "prebuild": "npm run vendor:three",
     "build": "tsc",
     "prestart": "npm run build",
     "start": "node dist/server/index.js",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "vendor:three": "mkdir -p public/vendor && cp node_modules/three/build/three.module.min.js public/vendor/three.module.min.js"
+    "vendor:three": "node scripts/vendor-three.mjs"
   },
   "dependencies": {
     "ws": "^8.18.0"

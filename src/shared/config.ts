@@ -7,6 +7,7 @@ export interface Config {
   minPlayers: number;
   mazeWidth: number;
   mazeHeight: number;
+  heartbeatIntervalMs: number;
 }
 
 function readInt(name: string, fallback: number): number {
@@ -58,5 +59,8 @@ export function loadConfig(overrides: Partial<Config> = {}): Config {
       overrides.mazeHeight ?? readInt('MAZE_HEIGHT', 9),
       MIN_MAZE_SIZE,
     ),
+    heartbeatIntervalMs:
+      overrides.heartbeatIntervalMs ??
+      Math.max(1000, readInt('HEARTBEAT_INTERVAL_MS', 25000)),
   };
 }
