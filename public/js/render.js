@@ -68,20 +68,26 @@ export class BoardRenderer {
         const cell = current.known.get(key);
         const visible = current.visibleNow.has(key);
 
-        const fill = cell ? tileColor(cell, visible) : BOARD_BACKGROUND;
+        const isExit = cell === 'exit' || cell === 'exitUsed';
+        const fill = isExit
+          ? tileColor('floor', visible)
+          : cell
+            ? tileColor(cell, visible)
+            : BOARD_BACKGROUND;
 
         ctx.fillStyle = fill;
         ctx.fillRect(x * tile, y * tile, tile, tile);
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.035)';
         ctx.strokeRect(x * tile + 0.5, y * tile + 0.5, tile - 1, tile - 1);
 
-        if (cell === 'exit') {
-          ctx.fillStyle = 'rgba(7, 10, 16, 0.42)';
+        if (isExit) {
+          const size = tile * 0.55;
+          ctx.fillStyle = tileColor(cell, visible);
           ctx.fillRect(
-            x * tile + tile * 0.3,
-            y * tile + tile * 0.3,
-            tile * 0.4,
-            tile * 0.4,
+            x * tile + (tile - size) / 2,
+            y * tile + (tile - size) / 2,
+            size,
+            size,
           );
         }
       }

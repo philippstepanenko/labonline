@@ -40,6 +40,10 @@ export const TILE_COLORS = {
     remembered: '#1d6b42',
     visible: '#33cc7a',
   },
+  exitUsed: {
+    remembered: '#5c1a1a',
+    visible: '#ff4d4d',
+  },
 };
 
 export function tileColor(type, visible) {

@@ -429,6 +429,20 @@ describe('Game: выходы и конец игры', () => {
     });
   });
 
+  it('показывает использованный выход другому игроку красной клеткой', () => {
+    const sent: SentMessage[] = [];
+    const game = createGame({
+      sent,
+      starts: [[1, 2], [1, 1]],
+      exits: [[2, 2]],
+    });
+
+    game.move('p1', 'right');
+
+    const snapshot = game.snapshotFor('p2');
+    expect(snapshot.visible.cells[2][2]).toBe('X');
+  });
+
   it('не завершает игру, пока последний активный игрок не сбежал', () => {
     const sent: SentMessage[] = [];
     const game = createGame({
