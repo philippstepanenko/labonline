@@ -270,7 +270,10 @@ document.querySelector('#spectate-options').addEventListener('click', (event) =>
 document
   .querySelector('#back-to-lobby-button')
   .addEventListener('click', () => {
-    ui.hideBackToLobby();
+    const others = state.players.filter(
+      (player) => player.connected && player.id !== state.youId,
+    ).length;
+    ui.showWaitingForLobby(others);
     ensureConnection().send({ type: 'backToLobby' });
   });
 

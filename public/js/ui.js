@@ -393,12 +393,27 @@ export function showGameOver(message, onViewMap, onBack) {
 }
 
 export function showBackToLobby() {
-  $('#back-to-lobby-button').hidden = false;
+  const button = $('#back-to-lobby-button');
+  button.hidden = false;
+  button.disabled = false;
+  button.textContent = 'В лобби';
 }
 
 export function hideBackToLobby() {
   const button = $('#back-to-lobby-button');
-  if (button) button.hidden = true;
+  if (!button) return;
+  button.hidden = true;
+  button.disabled = false;
+  button.textContent = 'В лобби';
+}
+
+export function showWaitingForLobby(count) {
+  const button = $('#back-to-lobby-button');
+  button.hidden = false;
+  button.disabled = true;
+  button.textContent =
+    count === 1 ? 'Ждём другого игрока…' : 'Ждём остальных игроков…';
+  toast(count === 1 ? 'Ожидаем другого игрока…' : 'Ожидаем других игроков…');
 }
 
 export function toast(message) {
