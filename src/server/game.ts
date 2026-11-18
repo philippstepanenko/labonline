@@ -442,6 +442,7 @@ export class Game {
       visible,
       players: visiblePlayers,
       exitsRemaining: this.exits.size,
+      usedExits: this.usedExitList(),
       log: [...this.log],
       ...(spectateTarget
         ? {
@@ -525,6 +526,15 @@ export class Game {
         }
       }
     }
+  }
+
+  private usedExitList(): [number, number][] {
+    const result: [number, number][] = [];
+    for (const key of this.usedExits) {
+      const [x, y] = key.split(',').map(Number);
+      if (Number.isFinite(x) && Number.isFinite(y)) result.push([x, y]);
+    }
+    return result;
   }
 
   private serializeKnown(

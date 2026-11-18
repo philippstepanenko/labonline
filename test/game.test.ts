@@ -522,6 +522,7 @@ describe('Game: наблюдение после побега', () => {
       targetId: 'p2',
       targetName: 'P2',
     });
+    expect(snapshot.usedExits).toEqual([[2, 1]]);
 
     const target = snapshot.players.find((player) => player.id === 'p2');
     const farPlayer = snapshot.players.find((player) => player.id === 'p3');
@@ -618,6 +619,7 @@ describe('Game: наблюдение после побега', () => {
       expect(snapshot.visible.origin).toEqual({ x: 0, y: 0 });
       expect(snapshot.visible.cells).toHaveLength(5);
       expect(snapshot.visible.cells[0]).toHaveLength(5);
+      expect(snapshot.usedExits).toEqual([[2, 1]]);
       expect(snapshot.players.every((player) => player.pos)).toBe(true);
     }
   });

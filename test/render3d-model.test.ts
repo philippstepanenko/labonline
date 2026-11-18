@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   collectTiles,
   groupPlayers,
+  staleTileKeys,
   tileToWorld,
 } from '../public/js/render3d-model.js';
 
@@ -45,6 +46,26 @@ describe('collectTiles', () => {
     };
 
     expect(collectTiles(current)).toEqual([]);
+  });
+});
+
+describe('staleTileKeys', () => {
+  it('находит меши клеток, которых больше нет на карте', () => {
+    expect(
+      staleTileKeys(['0,0', '1,1', '2,1'], [
+        { x: 0, y: 0 },
+        { x: 2, y: 1 },
+      ]),
+    ).toEqual(['1,1']);
+  });
+
+  it('ничего не возвращает, если все клетки остались', () => {
+    expect(
+      staleTileKeys(['0,0', '1,1'], [
+        { x: 0, y: 0 },
+        { x: 1, y: 1 },
+      ]),
+    ).toEqual([]);
   });
 });
 

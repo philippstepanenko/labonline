@@ -1,6 +1,12 @@
 import * as THREE from '../vendor/three.module.min.js';
 import { BOARD_BACKGROUND, TILE_COLORS } from './palette.js';
-import { collectTiles, groupPlayers, tileToWorld } from './render3d-model.js';
+import {
+  collectTiles,
+  groupPlayers,
+  staleTileKeys,
+  tileKey,
+  tileToWorld,
+} from './render3d-model.js';
 import { hueForPlayer } from './state.js';
 
 const WALL_HEIGHT = 0.5;
@@ -204,8 +210,15 @@ export class ThreeRenderer {
     const tileData = collectTiles(current);
     const { width, height } = current;
 
+    for (const staleKey of staleTileKeys(this.tileMeshes.keys(), tileData)) {
+      const entry = this.tileMeshes.get(staleKey);
+      if (!entry) continue;
+      this.tileGroup.remove(entry.mesh);
+      this.tileMeshes.delete(staleKey);
+    }
+
     for (const tile of tileData) {
-      const key = `${tile.x},${tile.y}`;
+      const key = tileKey(tile.x, tile.y);
       let entry = this.tileMeshes.get(key);
 
       if (entry && entry.type !== tile.type) {

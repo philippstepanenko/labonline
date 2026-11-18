@@ -76,6 +76,7 @@ export interface StateMessage {
   visible: VisibleArea;
   players: StatePlayer[];
   exitsRemaining: number;
+  usedExits: [number, number][];
   log: string[];
   spectate?: SpectateState;
 }

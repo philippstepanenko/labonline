@@ -101,6 +101,13 @@ export function applyState(message) {
       state.visibleNow.add(pointKey(x, y));
     }
   }
+
+  for (const [x, y] of message.usedExits ?? []) {
+    const key = pointKey(x, y);
+    if (state.known.get(key) === 'exit') {
+      state.known.set(key, 'exitUsed');
+    }
+  }
 }
 
 export function canMove() {
