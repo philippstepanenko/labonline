@@ -140,6 +140,14 @@ export class BoardRenderer {
           ctx.stroke();
         }
 
+        if (current.watchedId && player.id === current.watchedId) {
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, radius + tile * 0.17, 0, Math.PI * 2);
+          ctx.lineWidth = Math.max(1.5, tile * 0.08);
+          ctx.strokeStyle = '#33ccff';
+          ctx.stroke();
+        }
+
         const initial = (player.name || '?').trim().charAt(0).toUpperCase();
         ctx.fillStyle = '#08111a';
         ctx.font = `bold ${Math.max(8, Math.round(radius * 1.3))}px system-ui, sans-serif`;

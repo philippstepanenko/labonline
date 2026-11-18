@@ -1,4 +1,5 @@
 import type {
+  CellChar,
   Dir,
   EventKind,
   NamedPlayer,
@@ -9,7 +10,7 @@ import type {
   StateMessage,
   StatePlayer,
 } from '../shared/protocol';
-import { computeVisible, isWithinSight } from './fog';
+import { computeFullMap, computeVisible, isWithinSight } from './fog';
 import { cellKey, type Maze, type RNG } from './maze';
 
 const DELTAS: Record<Dir, Point> = {
@@ -39,7 +40,17 @@ export interface GamePlayer {
   energy: number;
   defeated: boolean;
   pos: Point;
+  known?: Map<string, CellChar>;
 }
+
+type SpectatePreference =
+  | { mode: 'auto' }
+  | { mode: 'player'; targetId: string };
+
+type SpectateTarget = {
+  mode: 'auto' | 'player';
+  target: GamePlayer;
+};
 
 type PendingInteraction = {
   initiatorId: string;
@@ -94,6 +105,7 @@ export class Game {
   private pending: PendingInteraction | null = null;
   private currentPhase: 'playing' | 'over' = 'playing';
   private log: string[] = [];
+  private readonly spectatePrefs = new Map<string, SpectatePreference>();
 
   constructor(options: GameOptions) {
     this.width = options.maze.width;
@@ -112,6 +124,7 @@ export class Game {
       player.escaped = false;
       player.energy = START_ENERGY;
       player.defeated = false;
+      player.known = new Map();
     }
 
     this.order.forEach((id, index) => {
@@ -120,6 +133,7 @@ export class Game {
       player.pos = { ...options.maze.starts[index] };
     });
 
+    this.revealAll();
     this.broadcastStart();
     this.broadcastState();
   }
@@ -321,39 +335,90 @@ export class Game {
     this.broadcastState();
   }
 
+  setSpectate(playerId: string, request: SpectatePreference): void {
+    if (this.currentPhase !== 'playing') return;
+
+    const player = this.byId.get(playerId);
+    if (!player) return;
+
+    if (!player.escaped) {
+      this.sendTo(player, {
+        type: 'error',
+        code: 'not_spectator',
+        message: 'Наблюдать можно только после побега',
+      });
+      return;
+    }
+
+    if (request.mode === 'player') {
+      const target = this.byId.get(request.targetId);
+      if (!target || !target.active || target.escaped) {
+        this.sendTo(player, {
+          type: 'error',
+          code: 'bad_spectate_target',
+          message: 'За этим игроком нельзя наблюдать',
+        });
+        return;
+      }
+      this.spectatePrefs.set(playerId, {
+        mode: 'player',
+        targetId: request.targetId,
+      });
+    } else {
+      this.spectatePrefs.set(playerId, { mode: 'auto' });
+    }
+
+    this.sendTo(player, this.snapshotFor(playerId));
+  }
+
   snapshotFor(playerId: string): StateMessage {
     const player = this.byId.get(playerId);
     if (!player) throw new Error(`Неизвестный игрок: ${playerId}`);
 
-    const visible = computeVisible(
-      {
-        width: this.width,
-        height: this.height,
-        walls: this.walls,
-        exits: this.exits,
-        usedExits: this.usedExits,
-      },
-      player.pos,
-    );
+    this.revealAll();
 
-    const visiblePlayers: StatePlayer[] = this.players.map((other) => {
-      const showPosition =
+    const world = {
+      width: this.width,
+      height: this.height,
+      walls: this.walls,
+      exits: this.exits,
+      usedExits: this.usedExits,
+    };
+
+    const spectateTarget =
+      this.currentPhase === 'playing' ? this.resolveSpectate(player) : null;
+
+    let visible;
+    let showPosition: (other: GamePlayer) => boolean;
+
+    if (spectateTarget) {
+      const target = spectateTarget.target;
+      visible = computeVisible(world, target.pos);
+      showPosition = (other) =>
+        other.id === target.id ||
+        (other.active && isWithinSight(target.pos, other.pos));
+    } else if (this.currentPhase === 'over') {
+      visible = computeFullMap(world);
+      showPosition = () => true;
+    } else {
+      visible = computeVisible(world, player.pos);
+      showPosition = (other) =>
         other.id === player.id ||
         (other.active && isWithinSight(player.pos, other.pos));
+    }
 
-      return {
-        id: other.id,
-        name: other.name,
-        hue: other.hue,
-        escaped: other.escaped,
-        active: other.active,
-        connected: other.connected,
-        energy: other.energy,
-        defeated: other.defeated,
-        isTurn: this.currentPlayerId === other.id,
-        ...(showPosition ? { pos: { ...other.pos } } : {}),
-      };
-    });
+    const visiblePlayers: StatePlayer[] = this.players.map((other) => ({
+      id: other.id,
+      name: other.name,
+      hue: other.hue,
+      escaped: other.escaped,
+      active: other.active,
+      connected: other.connected,
+      energy: other.energy,
+      defeated: other.defeated,
+      isTurn: this.currentPlayerId === other.id,
+      ...(showPosition(other) ? { pos: { ...other.pos } } : {}),
+    }));
 
     const turnPlayer = this.currentPlayer();
     const turn: NamedPlayer | null = turnPlayer
@@ -378,6 +443,16 @@ export class Game {
       players: visiblePlayers,
       exitsRemaining: this.exits.size,
       log: [...this.log],
+      ...(spectateTarget
+        ? {
+            spectate: {
+              mode: spectateTarget.mode,
+              targetId: spectateTarget.target.id,
+              targetName: spectateTarget.target.name,
+              known: this.serializeKnown(spectateTarget.target),
+            },
+          }
+        : {}),
     };
   }
 
@@ -404,6 +479,72 @@ export class Game {
     if (this.currentPhase !== 'playing') return null;
     const id = this.order[this.turnIndex];
     return id ? (this.byId.get(id) ?? null) : null;
+  }
+
+  private resolveSpectate(player: GamePlayer): SpectateTarget | null {
+    if (!player.escaped) return null;
+
+    const preference = this.spectatePrefs.get(player.id) ?? { mode: 'auto' };
+
+    if (preference.mode === 'player') {
+      const target = this.byId.get(preference.targetId);
+      if (target && target.active && !target.escaped) {
+        return { mode: 'player', target };
+      }
+    }
+
+    const current = this.currentPlayer();
+    if (current && current.active && !current.escaped) {
+      return { mode: 'auto', target: current };
+    }
+
+    const fallback = this.players.find(
+      (candidate) => candidate.active && !candidate.escaped,
+    );
+    return fallback ? { mode: 'auto', target: fallback } : null;
+  }
+
+  private revealAll(): void {
+    const world = {
+      width: this.width,
+      height: this.height,
+      walls: this.walls,
+      exits: this.exits,
+      usedExits: this.usedExits,
+    };
+
+    for (const player of this.players) {
+      const known = player.known ?? (player.known = new Map());
+      const { origin, cells } = computeVisible(world, player.pos);
+      for (let dy = 0; dy < cells.length; dy++) {
+        for (let dx = 0; dx < cells[dy].length; dx++) {
+          known.set(
+            cellKey(origin.x + dx, origin.y + dy),
+            cells[dy][dx],
+          );
+        }
+      }
+    }
+  }
+
+  private serializeKnown(
+    player: GamePlayer,
+  ): Array<[number, number, CellChar]> {
+    const known = player.known ?? new Map<string, CellChar>();
+    const entries: Array<[number, number, CellChar]> = [];
+
+    for (const [key, remembered] of known) {
+      const [x, y] = key.split(',').map(Number);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+
+      let cell = remembered;
+      if (this.exits.has(key)) cell = 'E';
+      else if (this.usedExits.has(key)) cell = 'X';
+
+      entries.push([x, y, cell]);
+    }
+
+    return entries;
   }
 
   private activePlayersAt(x: number, y: number): GamePlayer[] {

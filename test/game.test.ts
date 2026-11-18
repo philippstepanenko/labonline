@@ -495,6 +495,134 @@ describe('Game: отключения', () => {
   });
 });
 
+describe('Game: наблюдение после побега', () => {
+  function spectateGame(sent: SentMessage[]): Game {
+    return createGame({
+      sent,
+      starts: [[1, 1], [3, 1], [5, 5]],
+      exits: [[2, 1]],
+      order: ['p1', 'p2', 'p3'],
+      width: 7,
+      height: 7,
+    });
+  }
+
+  it('по умолчанию следит за текущим ходящим игроком', () => {
+    const sent: SentMessage[] = [];
+    const game = spectateGame(sent);
+
+    game.move('p1', 'right');
+
+    expect(playerState(game, 'p1').escaped).toBe(true);
+    expect(game.phase).toBe('playing');
+
+    const snapshot = game.snapshotFor('p1');
+    expect(snapshot.spectate).toMatchObject({
+      mode: 'auto',
+      targetId: 'p2',
+      targetName: 'P2',
+    });
+
+    const target = snapshot.players.find((player) => player.id === 'p2');
+    const farPlayer = snapshot.players.find((player) => player.id === 'p3');
+    expect(target?.pos).toEqual({ x: 3, y: 1 });
+    expect(farPlayer?.pos).toBeUndefined();
+  });
+
+  it('переключается на выбранного игрока и отдаёт его разведанную карту', () => {
+    const sent: SentMessage[] = [];
+    const game = spectateGame(sent);
+
+    game.move('p1', 'right');
+    game.setSpectate('p1', { mode: 'player', targetId: 'p3' });
+
+    const snapshot = game.snapshotFor('p1');
+    expect(snapshot.spectate).toMatchObject({
+      mode: 'player',
+      targetId: 'p3',
+      targetName: 'P3',
+    });
+
+    const known = new Map(
+      (snapshot.spectate?.known ?? []).map(([x, y, cell]) => [
+        `${x},${y}`,
+        cell,
+      ]),
+    );
+    expect(known.get('5,5')).toBe('.');
+    expect(known.has('1,1')).toBe(false);
+    expect(snapshot.visible.origin).toEqual({ x: 4, y: 4 });
+  });
+
+  it('запрещает наблюдение обычному игроку и неверной цели', () => {
+    const sent: SentMessage[] = [];
+    const game = spectateGame(sent);
+
+    game.setSpectate('p2', { mode: 'auto' });
+    expect(
+      hasMessage(
+        sent,
+        (message) =>
+          message.type === 'error' && message.code === 'not_spectator',
+      ),
+    ).toBe(true);
+
+    game.move('p1', 'right');
+    game.setSpectate('p1', { mode: 'player', targetId: 'p1' });
+    expect(
+      hasMessage(
+        sent,
+        (message) =>
+          message.type === 'error' && message.code === 'bad_spectate_target',
+      ),
+    ).toBe(true);
+
+    game.setSpectate('p1', { mode: 'player', targetId: 'nope' });
+    const errors = sent.filter(
+      (entry) =>
+        entry.message.type === 'error' &&
+        entry.message.code === 'bad_spectate_target',
+    );
+    expect(errors).toHaveLength(2);
+  });
+
+  it('возвращается к авто-наблюдению, если цель выбыла', () => {
+    const sent: SentMessage[] = [];
+    const game = spectateGame(sent);
+
+    game.move('p1', 'right');
+    game.setSpectate('p1', { mode: 'player', targetId: 'p2' });
+    game.disconnect('p2');
+
+    const snapshot = game.snapshotFor('p1');
+    expect(snapshot.spectate).toMatchObject({
+      mode: 'auto',
+      targetId: 'p3',
+    });
+  });
+
+  it('в конце игры показывает всем полную карту без режима наблюдателя', () => {
+    const sent: SentMessage[] = [];
+    const game = createGame({
+      sent,
+      starts: [[1, 1], [3, 3]],
+      exits: [[2, 1]],
+    });
+
+    game.move('p1', 'right');
+    expect(game.phase).toBe('over');
+
+    for (const id of ['p1', 'p2']) {
+      const snapshot = game.snapshotFor(id);
+      expect(snapshot.spectate).toBeUndefined();
+      expect(snapshot.visible.origin).toEqual({ x: 0, y: 0 });
+      expect(snapshot.visible.cells).toHaveLength(5);
+      expect(snapshot.visible.cells[0]).toHaveLength(5);
+      expect(snapshot.players.every((player) => player.pos)).toBe(true);
+    }
+  });
+});
+
 describe('Game: туман войны', () => {
   it('не раскрывает чужие позиции и выходы вне радиуса', () => {
     const sent: SentMessage[] = [];

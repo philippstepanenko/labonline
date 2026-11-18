@@ -48,6 +48,7 @@ export class ThreeRenderer {
       12,
     );
     this.ringGeometry = new THREE.TorusGeometry(0.32, 0.04, 8, 24);
+    this.watchedRingGeometry = new THREE.TorusGeometry(0.4, 0.045, 8, 28);
     this.defeatedGeometry = new THREE.SphereGeometry(0.07, 10, 10);
 
     this.tileMaterials = {
@@ -94,6 +95,7 @@ export class ThreeRenderer {
     };
 
     this.ringMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    this.watchedRingMaterial = new THREE.MeshBasicMaterial({ color: 0x33ccff });
     this.defeatedMaterial = new THREE.MeshBasicMaterial({ color: 0xff6b6b });
     this.playerMaterials = new Map();
 
@@ -121,8 +123,10 @@ export class ThreeRenderer {
     this.exitGeometry.dispose();
     this.playerGeometry.dispose();
     this.ringGeometry.dispose();
+    this.watchedRingGeometry.dispose();
     this.defeatedGeometry.dispose();
     this.ringMaterial.dispose();
+    this.watchedRingMaterial.dispose();
     this.defeatedMaterial.dispose();
 
     for (const materials of Object.values(this.tileMaterials)) {
@@ -276,6 +280,16 @@ export class ThreeRenderer {
         const ring = new THREE.Mesh(this.ringGeometry, this.ringMaterial);
         ring.rotation.x = -Math.PI / 2;
         ring.position.y = 0.05;
+        group.add(ring);
+      }
+
+      if (current.watchedId && player.id === current.watchedId) {
+        const ring = new THREE.Mesh(
+          this.watchedRingGeometry,
+          this.watchedRingMaterial,
+        );
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.y = 0.06;
         group.add(ring);
       }
 

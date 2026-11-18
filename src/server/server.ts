@@ -52,6 +52,9 @@ function isClientMessage(value: unknown): value is ClientMessage {
       return value.action === 'swap' || value.action === 'fight';
     case 'respondSwap':
       return typeof value.accept === 'boolean';
+    case 'spectate':
+      if (value.mode === 'auto') return true;
+      return value.mode === 'player' && typeof value.targetId === 'string';
     case 'pong':
       return true;
     case 'backToLobby':

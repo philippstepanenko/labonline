@@ -59,6 +59,7 @@ function handleMessage(message) {
       state.players = [];
       state.log = [];
       ui.closeModal();
+      ui.hideBackToLobby();
       ui.setScreen('lobby');
       ui.renderLobby(message);
       break;
@@ -66,18 +67,24 @@ function handleMessage(message) {
     case 'start':
       resetForStart(message);
       ui.closeModal();
+      ui.hideBackToLobby();
       ui.setScreen('game');
       ui.renderGame();
       view.reset();
       view.draw();
       break;
 
-    case 'state':
+    case 'state': {
+      const wasSpectator = Boolean(state.spectate);
       applyState(message);
       if (state.you) state.youId = state.you.id;
+      if (!wasSpectator && state.spectate) {
+        ui.toast('Вы сбежали! Теперь можно наблюдать за другими игроками.');
+      }
       ui.renderGame();
       view.draw();
       break;
+    }
 
     case 'chooseAction':
       state.busy = true;
@@ -118,9 +125,16 @@ function handleMessage(message) {
       state.busy = false;
       ui.renderGame();
       view.draw();
-      ui.showGameOver(message, () => {
-        connection.send({ type: 'backToLobby' });
-      });
+      ui.showGameOver(
+        message,
+        () => {
+          ui.closeModal();
+          ui.showBackToLobby();
+        },
+        () => {
+          connection.send({ type: 'backToLobby' });
+        },
+      );
       break;
 
     case 'error':
@@ -236,6 +250,29 @@ document.querySelector('#controls').addEventListener('click', (event) => {
   if (!button) return;
   sendMove(button.dataset.dir);
 });
+
+document.querySelector('#spectate-options').addEventListener('click', (event) => {
+  const auto = event.target.closest('button[data-spectate="auto"]');
+  if (auto) {
+    ensureConnection().send({ type: 'spectate', mode: 'auto' });
+    return;
+  }
+
+  const player = event.target.closest('button[data-spectate-player]');
+  if (!player) return;
+  ensureConnection().send({
+    type: 'spectate',
+    mode: 'player',
+    targetId: player.dataset.spectatePlayer,
+  });
+});
+
+document
+  .querySelector('#back-to-lobby-button')
+  .addEventListener('click', () => {
+    ui.hideBackToLobby();
+    ensureConnection().send({ type: 'backToLobby' });
+  });
 
 const KEY_TO_DIR = {
   ArrowUp: 'up',

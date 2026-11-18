@@ -52,6 +52,13 @@ export interface VisibleArea {
   exits: [number, number][];
 }
 
+export interface SpectateState {
+  mode: 'auto' | 'player';
+  targetId: string;
+  targetName: string;
+  known: Array<[number, number, CellChar]>;
+}
+
 export interface StateMessage {
   type: 'state';
   phase: 'playing' | 'over';
@@ -70,6 +77,7 @@ export interface StateMessage {
   players: StatePlayer[];
   exitsRemaining: number;
   log: string[];
+  spectate?: SpectateState;
 }
 
 export type EventKind =
@@ -91,6 +99,8 @@ export type ClientMessage =
   | { type: 'move'; dir: Dir }
   | { type: 'chooseAction'; action: 'swap' | 'fight' }
   | { type: 'respondSwap'; accept: boolean }
+  | { type: 'spectate'; mode: 'auto' }
+  | { type: 'spectate'; mode: 'player'; targetId: string }
   | { type: 'pong' }
   | { type: 'backToLobby' };
 

@@ -21,11 +21,20 @@ export const state = {
   exitsRemaining: 0,
   log: [],
   over: null,
+  spectate: null,
+  watchedId: null,
   busy: false,
 };
 
 export function pointKey(x, y) {
   return `${x},${y}`;
+}
+
+export function cellType(cell) {
+  if (cell === 'E') return 'exit';
+  if (cell === 'X') return 'exitUsed';
+  if (cell === '#') return 'wall';
+  return 'floor';
 }
 
 export function hueForId(id) {
@@ -56,6 +65,8 @@ export function resetForStart(message) {
   state.players = [];
   state.log = [];
   state.exitsRemaining = 0;
+  state.spectate = null;
+  state.watchedId = null;
 }
 
 export function applyState(message) {
@@ -68,7 +79,16 @@ export function applyState(message) {
   state.exitsRemaining = message.exitsRemaining;
   state.log = message.log;
   state.busy = false;
+  state.spectate = message.spectate ?? null;
+  state.watchedId = message.spectate?.targetId ?? null;
   state.visibleNow = new Set();
+
+  if (message.spectate) {
+    state.known = new Map();
+    for (const [x, y, cell] of message.spectate.known) {
+      state.known.set(pointKey(x, y), cellType(cell));
+    }
+  }
 
   const { origin, cells } = message.visible;
   for (let dy = 0; dy < cells.length; dy++) {
@@ -77,15 +97,7 @@ export function applyState(message) {
       const x = origin.x + dx;
       const y = origin.y + dy;
       const cell = row[dx];
-      const type =
-        cell === 'E'
-          ? 'exit'
-          : cell === 'X'
-            ? 'exitUsed'
-            : cell === '#'
-              ? 'wall'
-              : 'floor';
-      state.known.set(pointKey(x, y), type);
+      state.known.set(pointKey(x, y), cellType(cell));
       state.visibleNow.add(pointKey(x, y));
     }
   }
