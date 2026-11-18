@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { computeVisible, isWithinSight } from '../src/server/fog';
+import {
+  computeFullMap,
+  computeVisible,
+  isWithinSight,
+} from '../src/server/fog';
 
 const walls = Array.from({ length: 5 }, (_, y) =>
   Array.from({ length: 5 }, (_, x) => x === 0 || y === 0 || x === 4 || y === 4),
@@ -47,6 +51,27 @@ describe('computeVisible', () => {
 
     expect(visible.cells[1][1]).toBe('X');
     expect(visible.exits).not.toContainEqual([2, 2]);
+  });
+});
+
+describe('computeFullMap', () => {
+  it('возвращает всю карту и все выходы', () => {
+    const visible = computeFullMap({
+      ...world,
+      usedExits: new Set(['2,2']),
+    });
+
+    expect(visible.origin).toEqual({ x: 0, y: 0 });
+    expect(visible.cells).toHaveLength(5);
+    expect(visible.cells.every((row) => row.length === 5)).toBe(true);
+    expect(visible.cells[1][2]).toBe('E');
+    expect(visible.cells[2][2]).toBe('X');
+    expect(visible.cells[0][0]).toBe('#');
+    expect(visible.cells[1][1]).toBe('.');
+    expect(visible.exits).toEqual([
+      [2, 1],
+      [4, 4],
+    ]);
   });
 });
 

@@ -184,17 +184,31 @@ function renderColorPicker(message) {
 }
 
 export function renderGame() {
+  const screen = $('#game-screen');
+  screen.classList.toggle('spectating', Boolean(state.spectate));
+
   const turn = state.turn;
+  const watched = state.spectate
+    ? state.players.find((player) => player.id === state.spectate.targetId)
+    : null;
+
   $('#turn-info').textContent = turn
     ? `${turn.name}${turn.id === state.youId ? ' (вы)' : ''}`
     : '—';
   $('#exits-info').textContent = String(state.exitsRemaining);
-  $('#energy-info').textContent = state.you ? String(state.you.energy) : '—';
+  $('#energy-info').textContent = watched
+    ? String(watched.energy)
+    : state.you
+      ? String(state.you.energy)
+      : '—';
+  $('#energy-info').title = watched ? `Энергия: ${watched.name}` : '';
 
   const you = state.you;
   let youText = you ? you.name : '—';
   if (you) {
-    if (you.pending === 'choose') {
+    if (state.spectate) {
+      youText += ' — сбежал, наблюдает';
+    } else if (you.pending === 'choose') {
       youText += ' — выберите действие';
     } else if (you.pending === 'wait') {
       youText += ' — ждём ответа';
@@ -210,9 +224,36 @@ export function renderGame() {
   }
   $('#you-info').textContent = youText;
 
+  renderSpectate();
   renderPlayers();
   renderLog();
   renderControls();
+}
+
+function renderSpectate() {
+  const spectate = state.spectate;
+  const panel = $('#spectate-panel');
+  panel.hidden = !spectate;
+  if (!spectate) return;
+
+  const autoActive = spectate.mode === 'auto';
+  const buttons = [
+    `<button type="button" data-spectate="auto" aria-pressed="${autoActive}">Авто</button>`,
+  ];
+
+  for (const player of state.players) {
+    if (player.escaped || !player.active) continue;
+    const active = !autoActive && spectate.targetId === player.id;
+    buttons.push(
+      `<button type="button" data-spectate-player="${escapeHtml(player.id)}" aria-pressed="${active}">${escapeHtml(player.name)}</button>`,
+    );
+  }
+
+  $('#spectate-options').innerHTML = buttons.join('');
+  $('#spectate-hint').textContent =
+    spectate.mode === 'auto'
+      ? `Авто: ${escapeHtml(spectate.targetName)}`
+      : `Смотрите за ${escapeHtml(spectate.targetName)}`;
 }
 
 function renderPlayers() {
@@ -222,6 +263,7 @@ function renderPlayers() {
       const tags = [`энергия: ${player.energy}`];
       if (player.id === state.youId) tags.push('вы');
       if (player.isTurn && state.phase === 'playing') tags.push('ходит');
+      if (player.id === state.watchedId) tags.push('наблюдаете');
       if (player.escaped) tags.push('сбежал');
       else if (!player.connected) tags.push('отключён');
       else if (player.defeated && player.energy < 1) tags.push('повержен');
@@ -231,6 +273,7 @@ function renderPlayers() {
         player.isTurn && state.phase === 'playing' ? 'current' : '',
         player.escaped ? 'escaped' : '',
         !player.connected ? 'offline' : '',
+        player.id === state.watchedId ? 'watched' : '',
       ]
         .filter(Boolean)
         .join(' ');
@@ -313,7 +356,7 @@ export function showSwapModal(message, onRespond) {
   });
 }
 
-export function showGameOver(message, onAck) {
+export function showGameOver(message, onViewMap, onBack) {
   const escaped =
     message.escaped.length > 0
       ? message.escaped.map(escapeHtml).join(', ')
@@ -328,17 +371,49 @@ export function showGameOver(message, onAck) {
       <p><span class="label">Сбежали:</span> ${escaped}</p>
       <p><span class="label">Не сбежали:</span> ${losers}</p>
       <div class="modal-actions">
+        <button type="button" data-action="map" class="secondary">Посмотреть карту</button>
         <button type="button" data-action="back">В лобби</button>
       </div>
     </div>
   </div>`;
 
+  root
+    .querySelector('[data-action="map"]')
+    .addEventListener('click', () => {
+      closeModal();
+      onViewMap();
+    });
+
   const button = root.querySelector('[data-action="back"]');
   button.addEventListener('click', () => {
     button.disabled = true;
     button.textContent = 'Ждём остальных…';
-    onAck();
+    onBack();
   });
+}
+
+export function showBackToLobby() {
+  const button = $('#back-to-lobby-button');
+  button.hidden = false;
+  button.disabled = false;
+  button.textContent = 'В лобби';
+}
+
+export function hideBackToLobby() {
+  const button = $('#back-to-lobby-button');
+  if (!button) return;
+  button.hidden = true;
+  button.disabled = false;
+  button.textContent = 'В лобби';
+}
+
+export function showWaitingForLobby(count) {
+  const button = $('#back-to-lobby-button');
+  button.hidden = false;
+  button.disabled = true;
+  button.textContent =
+    count === 1 ? 'Ждём другого игрока…' : 'Ждём остальных игроков…';
+  toast(count === 1 ? 'Ожидаем другого игрока…' : 'Ожидаем других игроков…');
 }
 
 export function toast(message) {

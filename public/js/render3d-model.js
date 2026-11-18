@@ -5,6 +5,15 @@ export function tileKey(x, y) {
   return `${x},${y}`;
 }
 
+export function staleTileKeys(existingKeys, tiles) {
+  const seen = new Set(tiles.map((tile) => tileKey(tile.x, tile.y)));
+  const stale = [];
+  for (const key of existingKeys) {
+    if (!seen.has(key)) stale.push(key);
+  }
+  return stale;
+}
+
 export function tileToWorld(x, y, width, height) {
   return {
     x: (x - width / 2 + 0.5) * TILE_SIZE,

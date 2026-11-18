@@ -171,6 +171,11 @@
           </div>
 
           <aside class="sidebar">
+            <section class="panel" id="spectate-panel" hidden>
+              <h2>Наблюдение</h2>
+              <div id="spectate-options" class="spectate-options"></div>
+              <p id="spectate-hint" class="muted"></p>
+            </section>
             <section class="panel">
               <h2>Игроки</h2>
               <ul id="players-panel" class="players-list compact"></ul>
@@ -188,6 +193,14 @@
           <button data-dir="down" type="button" aria-label="Вниз">↓</button>
           <button data-dir="right" type="button" aria-label="Вправо">→</button>
         </div>
+        <button
+          id="back-to-lobby-button"
+          class="secondary"
+          type="button"
+          hidden
+        >
+          В лобби
+        </button>
         <p class="hint muted">
           Вид переключается между 2D и 3D кнопками в верхней панели.
           Управление: стрелки или WASD. Ход или действие стоит 1 энергию,

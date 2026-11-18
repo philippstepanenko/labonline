@@ -345,6 +345,12 @@ export class Room {
         }
         return;
 
+      case 'spectate':
+        if (this.phase === 'playing' && this.game) {
+          this.game.setSpectate(id, message);
+        }
+        return;
+
       case 'backToLobby':
         this.ackOver(id);
         return;

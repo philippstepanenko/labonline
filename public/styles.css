@@ -225,6 +225,33 @@ form label {
   box-shadow: inset 0 0 0 1px rgba(79, 140, 255, 0.4);
 }
 
+.players-list li.watched {
+  border-color: #33ccff;
+  box-shadow: inset 0 0 0 1px rgba(51, 204, 255, 0.35);
+}
+
+.spectate-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.spectate-options button {
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.spectate-options button[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: linear-gradient(180deg, #2c4a7a, #223a60);
+}
+
+#spectate-hint {
+  margin: 10px 0 0;
+  font-size: 12px;
+}
+
 .players-list li.escaped {
   opacity: 0.75;
 }
@@ -566,6 +593,16 @@ button.secondary {
 .dpad button[data-dir="right"] {
   grid-column: 3;
   grid-row: 2;
+}
+
+#game-screen.spectating .dpad {
+  display: none;
+}
+
+#back-to-lobby-button {
+  align-self: center;
+  margin-top: 12px;
+  padding: 10px 28px;
 }
 
 .hint {
