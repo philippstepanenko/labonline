@@ -20,6 +20,7 @@ export const state = {
   players: [],
   exitsRemaining: 0,
   log: [],
+  logExpanded: false,
   over: null,
   spectate: null,
   watchedId: null,
@@ -64,6 +65,7 @@ export function resetForStart(message) {
   state.you = null;
   state.players = [];
   state.log = [];
+  state.logExpanded = false;
   state.exitsRemaining = 0;
   state.spectate = null;
   state.watchedId = null;

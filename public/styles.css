@@ -537,6 +537,32 @@ button.secondary {
   margin-bottom: 10px;
 }
 
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.panel-header h2 {
+  margin-bottom: 0;
+}
+
+.log-toggle {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.log-toggle:hover:not(:disabled) {
+  border-color: #3b5480;
+  color: var(--text);
+}
+
 .panel .players-list {
   margin-bottom: 0;
 }
@@ -548,8 +574,6 @@ button.secondary {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-height: 220px;
-  overflow-y: auto;
   font-size: 13px;
   color: #b9c4d8;
 }
@@ -557,6 +581,53 @@ button.secondary {
 .log li {
   padding-left: 10px;
   border-left: 2px solid #2a3a57;
+}
+
+.log-compact li {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.log-expanded {
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: #2f4160 transparent;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 6px,
+    #000 calc(100% - 6px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 6px,
+    #000 calc(100% - 6px),
+    transparent 100%
+  );
+}
+
+.log-expanded::-webkit-scrollbar {
+  width: 6px;
+}
+
+.log-expanded::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.log-expanded::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #2f4160;
+}
+
+.log-expanded::-webkit-scrollbar-thumb:hover {
+  background: #3b5480;
 }
 
 .dpad {
@@ -733,7 +804,7 @@ button.secondary {
     gap: 12px;
   }
 
-  .log {
+  .log-expanded {
     max-height: 160px;
   }
 }

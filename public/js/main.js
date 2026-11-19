@@ -251,6 +251,11 @@ document.querySelector('#controls').addEventListener('click', (event) => {
   sendMove(button.dataset.dir);
 });
 
+document.querySelector('#log-toggle').addEventListener('click', () => {
+  state.logExpanded = !state.logExpanded;
+  ui.renderLog();
+});
+
 document.querySelector('#spectate-options').addEventListener('click', (event) => {
   const auto = event.target.closest('button[data-spectate="auto"]');
   if (auto) {
@@ -307,5 +312,6 @@ window.addEventListener('keydown', (event) => {
 window.addEventListener('resize', () => {
   if (state.screen === 'game') {
     view.resize();
+    ui.renderLog();
   }
 });

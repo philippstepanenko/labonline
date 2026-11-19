@@ -287,11 +287,36 @@ function renderPlayers() {
     .join('');
 }
 
-function renderLog() {
+const COMPACT_LOG_ENTRIES = 5;
+const MOBILE_LOG_ENTRIES = 3;
+
+export function renderLog() {
   const log = $('#log-panel');
-  const entries = state.log.slice(-20);
-  log.innerHTML = entries.map((entry) => `<li>${escapeHtml(entry)}</li>`).join('');
-  log.scrollTop = log.scrollHeight;
+  const toggle = $('#log-toggle');
+  if (!log || !toggle) return;
+
+  const expanded = state.logExpanded;
+  const compactLimit = window.matchMedia('(max-width: 560px)').matches
+    ? MOBILE_LOG_ENTRIES
+    : COMPACT_LOG_ENTRIES;
+  const entries = expanded ? state.log : state.log.slice(-compactLimit);
+  const previousScrollTop = log.scrollTop;
+  const wasAtBottom =
+    log.scrollHeight - previousScrollTop - log.clientHeight < 24;
+
+  log.classList.toggle('log-compact', !expanded);
+  log.classList.toggle('log-expanded', expanded);
+  log.innerHTML = entries
+    .map((entry) => `<li>${escapeHtml(entry)}</li>`)
+    .join('');
+
+  toggle.hidden = state.log.length <= compactLimit;
+  toggle.textContent = expanded ? 'Свернуть' : 'Показать все';
+  toggle.setAttribute('aria-expanded', String(expanded));
+
+  if (expanded) {
+    log.scrollTop = wasAtBottom ? log.scrollHeight : previousScrollTop;
+  }
 }
 
 export function renderControls() {
