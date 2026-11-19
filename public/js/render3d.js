@@ -8,6 +8,7 @@ import {
   tileToWorld,
 } from './render3d-model.js';
 import { hueForPlayer } from './state.js';
+import { measureBoardArea } from './layout.js';
 
 const WALL_HEIGHT = 0.5;
 const FLOOR_THICKNESS = 0.08;
@@ -168,14 +169,9 @@ export class ThreeRenderer {
   }
 
   updateViewport(width, height) {
-    const wrapper = this.canvas.parentElement;
-    const cssWidth = Math.max(
-      240,
-      wrapper && wrapper.clientWidth > 0
-        ? wrapper.clientWidth
-        : window.innerWidth - 48,
-    );
-    const cssHeight = Math.max(240, window.innerHeight - 300);
+    const area = measureBoardArea(this.canvas);
+    const cssWidth = Math.max(240, area.width);
+    const cssHeight = Math.max(240, area.height);
     const aspect = cssWidth / cssHeight;
 
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));

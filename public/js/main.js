@@ -311,7 +311,7 @@ window.addEventListener('keydown', (event) => {
 
 window.addEventListener('resize', () => {
   if (state.screen === 'game') {
-    view.resize();
+    view.scheduleResize(true);
     ui.renderLog();
   }
 });

@@ -42,6 +42,10 @@ export class ViewManager {
     this.lastState = null;
     this.unsupported = false;
     this.loading3d = false;
+    this.resizeObserver = null;
+    this.resizeFrame = 0;
+    this.resizeForced = false;
+    this.lastSize = '';
   }
 
   attach() {
@@ -55,6 +59,36 @@ export class ViewManager {
 
     this.mode = readMode();
     this.applyMode();
+    this.observeResize();
+  }
+
+  observeResize() {
+    if (typeof ResizeObserver === 'undefined') return;
+    const wrapper = this.canvas2d.parentElement;
+    if (!wrapper) return;
+
+    this.resizeObserver = new ResizeObserver(() => this.scheduleResize());
+    this.resizeObserver.observe(wrapper);
+  }
+
+  scheduleResize(force = false) {
+    if (force) this.resizeForced = true;
+    if (this.resizeFrame) return;
+
+    this.resizeFrame = window.requestAnimationFrame(() => {
+      this.resizeFrame = 0;
+      const forced = this.resizeForced;
+      this.resizeForced = false;
+
+      const wrapper = this.canvas2d.parentElement;
+      if (!wrapper || wrapper.clientWidth === 0) return;
+
+      const size = `${wrapper.clientWidth}x${wrapper.clientHeight}`;
+      if (!forced && size === this.lastSize) return;
+
+      this.lastSize = size;
+      this.resize();
+    });
   }
 
   async setMode(mode) {
@@ -125,6 +159,15 @@ export class ViewManager {
   }
 
   dispose() {
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+      this.resizeObserver = null;
+    }
+    if (this.resizeFrame) {
+      window.cancelAnimationFrame(this.resizeFrame);
+      this.resizeFrame = 0;
+    }
+
     this.renderer2d.dispose();
     if (this.renderer3d) {
       this.renderer3d.dispose();
