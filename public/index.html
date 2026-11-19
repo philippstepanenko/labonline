@@ -181,8 +181,20 @@
               <ul id="players-panel" class="players-list compact"></ul>
             </section>
             <section class="panel">
-              <h2>События</h2>
-              <ol id="log-panel" class="log"></ol>
+              <div class="panel-header">
+                <h2>События</h2>
+                <button
+                  id="log-toggle"
+                  class="log-toggle"
+                  type="button"
+                  aria-controls="log-panel"
+                  aria-expanded="false"
+                  hidden
+                >
+                  Показать все
+                </button>
+              </div>
+              <ol id="log-panel" class="log log-compact"></ol>
             </section>
           </aside>
         </main>

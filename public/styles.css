@@ -468,6 +468,7 @@ button.secondary {
 .board-wrap {
   flex: 1 1 auto;
   min-width: 0;
+  min-height: 0;
   display: flex;
   justify-content: center;
   align-items: flex-start;
@@ -476,6 +477,7 @@ button.secondary {
 #board,
 #board3d {
   display: block;
+  max-width: 100%;
   border-radius: 14px;
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
@@ -537,6 +539,32 @@ button.secondary {
   margin-bottom: 10px;
 }
 
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.panel-header h2 {
+  margin-bottom: 0;
+}
+
+.log-toggle {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.log-toggle:hover:not(:disabled) {
+  border-color: #3b5480;
+  color: var(--text);
+}
+
 .panel .players-list {
   margin-bottom: 0;
 }
@@ -548,8 +576,6 @@ button.secondary {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-height: 220px;
-  overflow-y: auto;
   font-size: 13px;
   color: #b9c4d8;
 }
@@ -557,6 +583,53 @@ button.secondary {
 .log li {
   padding-left: 10px;
   border-left: 2px solid #2a3a57;
+}
+
+.log-compact li {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+
+.log-expanded {
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: #2f4160 transparent;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 6px,
+    #000 calc(100% - 6px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 6px,
+    #000 calc(100% - 6px),
+    transparent 100%
+  );
+}
+
+.log-expanded::-webkit-scrollbar {
+  width: 6px;
+}
+
+.log-expanded::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.log-expanded::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #2f4160;
+}
+
+.log-expanded::-webkit-scrollbar-thumb:hover {
+  background: #3b5480;
 }
 
 .dpad {
@@ -648,7 +721,7 @@ button.secondary {
 .toast-root {
   position: fixed;
   left: 50%;
-  bottom: 22px;
+  top: 16px;
   transform: translateX(-50%);
   z-index: 120;
   width: min(520px, calc(100vw - 32px));
@@ -659,6 +732,9 @@ button.secondary {
 }
 
 .toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
   padding: 10px 14px;
   border-radius: 10px;
   border: 1px solid var(--border);
@@ -670,9 +746,33 @@ button.secondary {
   animation: toast-in 0.18s ease-out;
 }
 
+.toast-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.toast-close {
+  flex: 0 0 auto;
+  margin: -2px -4px 0 0;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.2;
+  pointer-events: auto;
+}
+
+.toast-close:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  filter: none;
+}
+
 .toast-out {
   opacity: 0;
-  transform: translateY(6px);
+  transform: translateY(-6px);
   transition:
     opacity 0.25s ease,
     transform 0.25s ease;
@@ -681,7 +781,7 @@ button.secondary {
 @keyframes toast-in {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(-8px);
   }
   to {
     opacity: 1;
@@ -706,7 +806,7 @@ button.secondary {
     gap: 12px;
   }
 
-  .log {
+  .log-expanded {
     max-height: 160px;
   }
 }

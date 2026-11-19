@@ -1,7 +1,7 @@
 import { pointKey, hueForPlayer, state } from './state.js';
 import { BOARD_BACKGROUND, tileColor, WALL_EDGE } from './palette.js';
+import { fitTileSize, measureBoardArea } from './layout.js';
 
-const MAX_TILE = 30;
 const MIN_TILE = 10;
 
 export class BoardRenderer {
@@ -28,20 +28,16 @@ export class BoardRenderer {
     const { width, height } = current;
     if (!width || !height) return;
 
-    const wrapper = this.canvas.parentElement;
-    const availableWidth =
-      wrapper && wrapper.clientWidth > 0
-        ? wrapper.clientWidth
-        : window.innerWidth - 48;
-    const availableHeight = Math.max(220, window.innerHeight - 300);
+    const { width: availableWidth, height: availableHeight } =
+      measureBoardArea(this.canvas);
 
-    const tile = Math.max(
-      MIN_TILE,
-      Math.min(
-        MAX_TILE,
-        Math.floor(Math.min(availableWidth / width, availableHeight / height)),
-      ),
-    );
+    const tile = fitTileSize({
+      availableWidth,
+      availableHeight,
+      columns: width,
+      rows: height,
+      minTile: MIN_TILE,
+    });
 
     const dpr = window.devicePixelRatio || 1;
     const cssWidth = width * tile;

@@ -34,6 +34,12 @@ describe('applyState: карта и использованные выходы', 
     resetForStart({ youId: 'p1', width: 5, height: 5 });
   });
 
+  it('сбрасывает раскрытие журнала при старте', () => {
+    state.logExpanded = true;
+    resetForStart({ youId: 'p1', width: 5, height: 5 });
+    expect(state.logExpanded).toBe(false);
+  });
+
   it('сразу перекрашивает известный выход после использования', () => {
     applyState(
       stateMessage({

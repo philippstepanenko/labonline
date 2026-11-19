@@ -287,11 +287,36 @@ function renderPlayers() {
     .join('');
 }
 
-function renderLog() {
+const COMPACT_LOG_ENTRIES = 5;
+const MOBILE_LOG_ENTRIES = 3;
+
+export function renderLog() {
   const log = $('#log-panel');
-  const entries = state.log.slice(-20);
-  log.innerHTML = entries.map((entry) => `<li>${escapeHtml(entry)}</li>`).join('');
-  log.scrollTop = log.scrollHeight;
+  const toggle = $('#log-toggle');
+  if (!log || !toggle) return;
+
+  const expanded = state.logExpanded;
+  const compactLimit = window.matchMedia('(max-width: 560px)').matches
+    ? MOBILE_LOG_ENTRIES
+    : COMPACT_LOG_ENTRIES;
+  const entries = expanded ? state.log : state.log.slice(-compactLimit);
+  const previousScrollTop = log.scrollTop;
+  const wasAtBottom =
+    log.scrollHeight - previousScrollTop - log.clientHeight < 24;
+
+  log.classList.toggle('log-compact', !expanded);
+  log.classList.toggle('log-expanded', expanded);
+  log.innerHTML = entries
+    .map((entry) => `<li>${escapeHtml(entry)}</li>`)
+    .join('');
+
+  toggle.hidden = state.log.length <= compactLimit;
+  toggle.textContent = expanded ? 'Свернуть' : 'Показать все';
+  toggle.setAttribute('aria-expanded', String(expanded));
+
+  if (expanded) {
+    log.scrollTop = wasAtBottom ? log.scrollHeight : previousScrollTop;
+  }
 }
 
 export function renderControls() {
@@ -420,17 +445,35 @@ export function toast(message) {
   const root = $('#toast-root');
   const element = document.createElement('div');
   element.className = 'toast';
-  element.textContent = message;
+
+  const text = document.createElement('span');
+  text.className = 'toast-text';
+  text.textContent = message;
+
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'toast-close';
+  close.setAttribute('aria-label', 'Закрыть сообщение');
+  close.textContent = '×';
+
+  element.append(text, close);
   root.append(element);
 
   while (root.children.length > 3) {
     root.firstElementChild.remove();
   }
 
-  window.setTimeout(() => {
+  let hideTimer;
+  let removeTimer;
+  const remove = () => {
+    window.clearTimeout(hideTimer);
+    window.clearTimeout(removeTimer);
     element.classList.add('toast-out');
-    window.setTimeout(() => element.remove(), 250);
-  }, 4000);
+    removeTimer = window.setTimeout(() => element.remove(), 250);
+  };
+
+  close.addEventListener('click', remove);
+  hideTimer = window.setTimeout(remove, 4000);
 }
 
 export function showConnectionLost() {
