@@ -1,6 +1,7 @@
 import { createConnection } from './net.js';
 import { state, resetForStart, applyState, canMove } from './state.js';
 import { ViewManager } from './view.js';
+import { attachSwipeControls } from './swipe.js';
 import * as ui from './ui.js';
 
 const view = new ViewManager({
@@ -249,6 +250,16 @@ document.querySelector('#controls').addEventListener('click', (event) => {
   const button = event.target.closest('button[data-dir]');
   if (!button) return;
   sendMove(button.dataset.dir);
+});
+
+document.querySelector('#log-toggle').addEventListener('click', () => {
+  state.logExpanded = !state.logExpanded;
+  ui.renderLog();
+});
+
+attachSwipeControls(document.querySelector('.board-wrap'), (dir) => {
+  if (state.screen !== 'game') return;
+  sendMove(dir);
 });
 
 document.querySelector('#log-toggle').addEventListener('click', () => {

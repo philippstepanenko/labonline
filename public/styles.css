@@ -482,6 +482,7 @@ button.secondary {
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
   background: #070a10;
+  touch-action: none;
 }
 
 #board3d {
