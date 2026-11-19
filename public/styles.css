@@ -648,7 +648,7 @@ button.secondary {
 .toast-root {
   position: fixed;
   left: 50%;
-  bottom: 22px;
+  top: 16px;
   transform: translateX(-50%);
   z-index: 120;
   width: min(520px, calc(100vw - 32px));
@@ -672,7 +672,7 @@ button.secondary {
 
 .toast-out {
   opacity: 0;
-  transform: translateY(6px);
+  transform: translateY(-6px);
   transition:
     opacity 0.25s ease,
     transform 0.25s ease;
@@ -681,7 +681,7 @@ button.secondary {
 @keyframes toast-in {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(-8px);
   }
   to {
     opacity: 1;
