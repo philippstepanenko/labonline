@@ -797,6 +797,11 @@ button.secondary {
 
   .board-area {
     flex-direction: column;
+    align-items: stretch;
+  }
+
+  .board-wrap {
+    width: 100%;
   }
 
   .sidebar {
