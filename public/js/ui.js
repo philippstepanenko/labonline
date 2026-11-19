@@ -420,17 +420,35 @@ export function toast(message) {
   const root = $('#toast-root');
   const element = document.createElement('div');
   element.className = 'toast';
-  element.textContent = message;
+
+  const text = document.createElement('span');
+  text.className = 'toast-text';
+  text.textContent = message;
+
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'toast-close';
+  close.setAttribute('aria-label', 'Закрыть сообщение');
+  close.textContent = '×';
+
+  element.append(text, close);
   root.append(element);
 
   while (root.children.length > 3) {
     root.firstElementChild.remove();
   }
 
-  window.setTimeout(() => {
+  let hideTimer;
+  let removeTimer;
+  const remove = () => {
+    window.clearTimeout(hideTimer);
+    window.clearTimeout(removeTimer);
     element.classList.add('toast-out');
-    window.setTimeout(() => element.remove(), 250);
-  }, 4000);
+    removeTimer = window.setTimeout(() => element.remove(), 250);
+  };
+
+  close.addEventListener('click', remove);
+  hideTimer = window.setTimeout(remove, 4000);
 }
 
 export function showConnectionLost() {
