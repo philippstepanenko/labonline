@@ -255,6 +255,31 @@ function renderSpectate() {
       : `Смотрите за ${escapeHtml(spectate.targetName)}`;
 }
 
+function namedPlayerLabel(player) {
+  if (!player) return '—';
+  return player.id === state.youId ? `${player.name} (вы)` : player.name;
+}
+
+function playersSummaryText() {
+  if (state.phase === 'over') return 'Игра окончена';
+
+  const current = state.turn;
+  const next = state.nextTurn;
+  if (!current && !next) return 'Ход не определён';
+
+  const parts = [];
+  if (current) parts.push(`Сейчас: ${namedPlayerLabel(current)}`);
+  if (next) parts.push(`далее: ${namedPlayerLabel(next)}`);
+  return parts.join(' · ');
+}
+
+function updatePanelToggle(toggle, collapsed, expandLabel, collapseLabel) {
+  if (!toggle) return;
+  toggle.setAttribute('aria-expanded', String(!collapsed));
+  toggle.setAttribute('aria-label', collapsed ? expandLabel : collapseLabel);
+  toggle.textContent = collapsed ? '▸' : '▾';
+}
+
 function renderPlayers() {
   const list = $('#players-panel');
   list.innerHTML = state.players
@@ -284,6 +309,19 @@ function renderPlayers() {
       </li>`;
     })
     .join('');
+
+  const summary = $('#players-summary');
+  if (summary) {
+    summary.textContent = playersSummaryText();
+    summary.hidden = !state.playersCollapsed;
+  }
+  list.hidden = state.playersCollapsed;
+  updatePanelToggle(
+    $('#players-toggle'),
+    state.playersCollapsed,
+    'Развернуть игроков',
+    'Свернуть игроков',
+  );
 }
 
 const COMPACT_LOG_ENTRIES = 5;
@@ -294,10 +332,9 @@ export function renderLog() {
   const toggle = $('#log-toggle');
   if (!log || !toggle) return;
 
+  const mobile = window.matchMedia('(max-width: 560px)').matches;
   const expanded = state.logExpanded;
-  const compactLimit = window.matchMedia('(max-width: 560px)').matches
-    ? MOBILE_LOG_ENTRIES
-    : COMPACT_LOG_ENTRIES;
+  const compactLimit = mobile ? MOBILE_LOG_ENTRIES : COMPACT_LOG_ENTRIES;
   const entries = expanded ? state.log : state.log.slice(-compactLimit);
   const previousScrollTop = log.scrollTop;
   const wasAtBottom =
@@ -308,10 +345,25 @@ export function renderLog() {
   log.innerHTML = entries
     .map((entry) => `<li>${escapeHtml(entry)}</li>`)
     .join('');
+  log.hidden = state.eventsCollapsed;
 
-  toggle.hidden = state.log.length <= compactLimit;
-  toggle.textContent = expanded ? 'Свернуть' : 'Показать все';
+  toggle.hidden = state.eventsCollapsed || state.log.length <= compactLimit;
+  toggle.textContent = expanded ? 'Свернуть' : mobile ? 'Все' : 'Показать все';
   toggle.setAttribute('aria-expanded', String(expanded));
+
+  const summary = $('#log-summary');
+  if (summary) {
+    summary.textContent = state.log.length
+      ? state.log[state.log.length - 1]
+      : 'Пока событий нет';
+    summary.hidden = !state.eventsCollapsed;
+  }
+  updatePanelToggle(
+    $('#events-toggle'),
+    state.eventsCollapsed,
+    'Развернуть события',
+    'Свернуть события',
+  );
 
   if (expanded) {
     log.scrollTop = wasAtBottom ? log.scrollHeight : previousScrollTop;

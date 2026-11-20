@@ -191,23 +191,49 @@
               <p id="spectate-hint" class="muted"></p>
             </section>
             <section class="panel">
-              <h2>Игроки</h2>
+              <div class="panel-header">
+                <h2>Игроки</h2>
+                <button
+                  id="players-toggle"
+                  class="panel-toggle"
+                  type="button"
+                  aria-controls="players-panel"
+                  aria-expanded="true"
+                  aria-label="Свернуть игроков"
+                >
+                  ▾
+                </button>
+              </div>
+              <p id="players-summary" class="panel-summary" hidden></p>
               <ul id="players-panel" class="players-list compact"></ul>
             </section>
             <section class="panel">
               <div class="panel-header">
                 <h2>События</h2>
-                <button
-                  id="log-toggle"
-                  class="log-toggle"
-                  type="button"
-                  aria-controls="log-panel"
-                  aria-expanded="false"
-                  hidden
-                >
-                  Показать все
-                </button>
+                <div class="panel-actions">
+                  <button
+                    id="log-toggle"
+                    class="log-toggle"
+                    type="button"
+                    aria-controls="log-panel"
+                    aria-expanded="false"
+                    hidden
+                  >
+                    Показать все
+                  </button>
+                  <button
+                    id="events-toggle"
+                    class="panel-toggle"
+                    type="button"
+                    aria-controls="log-panel"
+                    aria-expanded="true"
+                    aria-label="Свернуть события"
+                  >
+                    ▾
+                  </button>
+                </div>
               </div>
+              <p id="log-summary" class="panel-summary" hidden></p>
               <ol id="log-panel" class="log log-compact"></ol>
             </section>
           </aside>

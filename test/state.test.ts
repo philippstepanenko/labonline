@@ -8,6 +8,7 @@ function stateMessage(overrides: Record<string, unknown> = {}) {
     width: 5,
     height: 5,
     turn: null,
+    nextTurn: null,
     you: {
       id: 'p1',
       name: 'P1',
@@ -38,6 +39,18 @@ describe('applyState: карта и использованные выходы', 
     state.logExpanded = true;
     resetForStart({ youId: 'p1', width: 5, height: 5 });
     expect(state.logExpanded).toBe(false);
+  });
+
+  it('сохраняет следующего игрока и сбрасывает его при старте', () => {
+    applyState(
+      stateMessage({
+        nextTurn: { id: 'p2', name: 'P2' },
+      }) as never,
+    );
+    expect(state.nextTurn).toEqual({ id: 'p2', name: 'P2' });
+
+    resetForStart({ youId: 'p1', width: 5, height: 5 });
+    expect(state.nextTurn).toBeNull();
   });
 
   it('сразу перекрашивает известный выход после использования', () => {

@@ -4,6 +4,11 @@ import { ViewManager } from './view.js';
 import { attachSwipeControls } from './swipe.js';
 import * as ui from './ui.js';
 
+if (window.matchMedia('(max-width: 560px)').matches) {
+  state.playersCollapsed = true;
+  state.eventsCollapsed = true;
+}
+
 const view = new ViewManager({
   canvas2d: document.querySelector('#board'),
   canvas3d: document.querySelector('#board3d'),
@@ -243,6 +248,17 @@ document.querySelector('#leave-room-button').addEventListener('click', () => {
 document.querySelector('#log-toggle').addEventListener('click', () => {
   state.logExpanded = !state.logExpanded;
   ui.renderLog();
+});
+
+document.querySelector('#players-toggle').addEventListener('click', () => {
+  state.playersCollapsed = !state.playersCollapsed;
+  ui.renderGame();
+});
+
+document.querySelector('#events-toggle').addEventListener('click', () => {
+  state.eventsCollapsed = !state.eventsCollapsed;
+  if (state.eventsCollapsed) state.logExpanded = false;
+  ui.renderGame();
 });
 
 document.querySelector('#info-button').addEventListener('click', () => {

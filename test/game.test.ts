@@ -127,6 +127,26 @@ describe('Game: ходы, стены и энергия', () => {
     expect(game.currentPlayerId).toBe('p2');
   });
 
+  it('отдаёт следующего игрока по порядку хода', () => {
+    const sent: SentMessage[] = [];
+    const game = createGame({
+      sent,
+      starts: [[1, 1], [3, 3], [1, 3]],
+      exits: [[3, 1]],
+      order: ['p1', 'p2', 'p3'],
+    });
+
+    const first = game.snapshotFor('p1');
+    expect(first.turn).toEqual({ id: 'p1', name: 'P1' });
+    expect(first.nextTurn).toEqual({ id: 'p2', name: 'P2' });
+
+    game.move('p1', 'right');
+
+    const second = game.snapshotFor('p2');
+    expect(second.turn).toEqual({ id: 'p2', name: 'P2' });
+    expect(second.nextTurn).toEqual({ id: 'p3', name: 'P3' });
+  });
+
   it('начисляет +1 энергии всем игрокам в начале нового круга', () => {
     const sent: SentMessage[] = [];
     const game = createGame({ sent, starts: [[1, 1], [3, 3]], exits: [[3, 1]] });

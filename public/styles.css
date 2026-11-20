@@ -573,6 +573,45 @@ button.secondary {
   margin-bottom: 0;
 }
 
+.panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.panel-toggle {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.panel-toggle:hover:not(:disabled) {
+  border-color: #3b5480;
+  color: var(--text);
+}
+
+.panel-summary {
+  margin: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#players-summary {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+
 .log-toggle {
   flex: 0 0 auto;
   padding: 4px 8px;
@@ -856,6 +895,19 @@ button.secondary {
 
   .sidebar {
     grid-template-columns: 1fr;
+  }
+
+  .panel-actions {
+    gap: 4px;
+  }
+
+  .panel-toggle {
+    width: 22px;
+    height: 22px;
+  }
+
+  .panel-summary {
+    font-size: 11px;
   }
 
   .view-row {
