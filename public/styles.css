@@ -490,9 +490,15 @@ button.secondary {
   max-width: 100%;
 }
 
+.view-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
 .view-toggle {
   display: inline-flex;
-  margin-top: 4px;
   border: 1px solid var(--border);
   border-radius: 10px;
   overflow: hidden;
@@ -519,6 +525,17 @@ button.secondary {
 .view-toggle button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+.info-button {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 50%;
+  font-weight: 700;
+  font-style: italic;
+  line-height: 1;
 }
 
 .sidebar {
@@ -633,56 +650,10 @@ button.secondary {
   background: #3b5480;
 }
 
-.dpad {
-  display: grid;
-  grid-template-columns: repeat(3, 56px);
-  grid-template-rows: repeat(2, 56px);
-  gap: 8px;
-  justify-content: center;
-  align-self: center;
-  margin-top: 12px;
-}
-
-.dpad button {
-  padding: 0;
-  font-size: 22px;
-  line-height: 1;
-}
-
-.dpad button[data-dir="up"] {
-  grid-column: 2;
-  grid-row: 1;
-}
-
-.dpad button[data-dir="left"] {
-  grid-column: 1;
-  grid-row: 2;
-}
-
-.dpad button[data-dir="down"] {
-  grid-column: 2;
-  grid-row: 2;
-}
-
-.dpad button[data-dir="right"] {
-  grid-column: 3;
-  grid-row: 2;
-}
-
-#game-screen.spectating .dpad {
-  display: none;
-}
-
 #back-to-lobby-button {
   align-self: center;
   margin-top: 12px;
   padding: 10px 28px;
-}
-
-.hint {
-  margin: 0;
-  text-align: center;
-  font-size: 12px;
 }
 
 .overlay {
@@ -832,11 +803,6 @@ button.secondary {
 
   .sidebar {
     grid-template-columns: 1fr;
-  }
-
-  .dpad {
-    grid-template-columns: repeat(3, 52px);
-    grid-template-rows: repeat(2, 52px);
   }
 
   .modal-actions button {

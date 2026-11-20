@@ -1,4 +1,4 @@
-import { state, canMove, hueForPlayer } from './state.js';
+import { state, hueForPlayer } from './state.js';
 import { PLAYER_COLORS, playerColorName } from './palette.js';
 
 const ESCAPE_MAP = {
@@ -227,7 +227,6 @@ export function renderGame() {
   renderSpectate();
   renderPlayers();
   renderLog();
-  renderControls();
 }
 
 function renderSpectate() {
@@ -319,15 +318,40 @@ export function renderLog() {
   }
 }
 
-export function renderControls() {
-  const enabled = canMove();
-  for (const button of document.querySelectorAll('#controls button')) {
-    button.disabled = !enabled;
-  }
-}
-
 export function closeModal() {
   $('#modal-root').innerHTML = '';
+}
+
+export function showInfoModal() {
+  const root = $('#modal-root');
+  root.innerHTML = `<div class="overlay">
+    <div class="card modal" role="dialog" aria-modal="true" aria-labelledby="info-title">
+      <h2 id="info-title">Правила игры</h2>
+      <p class="muted">
+        Ход или действие стоит 1 энергию, каждый круг начисляется +1.
+      </p>
+      <p class="muted">
+        Проигравший бой теряет 3 энергии и становится поверженным: на его
+        клетку можно заступить, пока он пропускает ходы.
+      </p>
+      <p class="muted">Обычный соперник всегда вызывает обмен или бой.</p>
+      <p class="muted">
+        Видно только 8 соседних клеток — исследованная карта запоминается.
+      </p>
+      <div class="modal-actions">
+        <button type="button" data-action="close">Понятно</button>
+      </div>
+    </div>
+  </div>`;
+
+  root
+    .querySelector('[data-action="close"]')
+    .addEventListener('click', closeModal);
+
+  const overlay = root.querySelector('.overlay');
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay) closeModal();
+  });
 }
 
 export function showChoiceModal(message, onChoose) {

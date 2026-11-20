@@ -89,21 +89,17 @@ function handleMessage(message) {
 
     case 'chooseAction':
       state.busy = true;
-      ui.renderControls();
       ui.showChoiceModal(message, (action) => {
         state.busy = true;
-        ui.renderControls();
         connection.send({ type: 'chooseAction', action });
       });
       break;
 
     case 'swapOffer':
       state.busy = true;
-      ui.renderControls();
       ui.showSwapModal(message, (accept) => {
         state.busy = true;
         ui.closeModal();
-        ui.renderControls();
         connection.send({ type: 'respondSwap', accept });
       });
       break;
@@ -117,7 +113,6 @@ function handleMessage(message) {
       if (message.reason === 'wall') ui.toast('Туда нельзя: стена');
       if (message.reason === 'notTurn') ui.toast('Сейчас не ваш ход');
       if (message.reason === 'noEnergy') ui.toast('Не хватает энергии');
-      ui.renderControls();
       break;
 
     case 'gameOver':
@@ -162,7 +157,6 @@ function handleMessage(message) {
 function sendMove(dir) {
   if (!canMove()) return;
   state.busy = true;
-  ui.renderControls();
   ensureConnection().send({ type: 'move', dir });
 }
 
@@ -246,25 +240,18 @@ document.querySelector('#leave-room-button').addEventListener('click', () => {
   ensureConnection().send({ type: 'leaveRoom' });
 });
 
-document.querySelector('#controls').addEventListener('click', (event) => {
-  const button = event.target.closest('button[data-dir]');
-  if (!button) return;
-  sendMove(button.dataset.dir);
-});
-
 document.querySelector('#log-toggle').addEventListener('click', () => {
   state.logExpanded = !state.logExpanded;
   ui.renderLog();
+});
+
+document.querySelector('#info-button').addEventListener('click', () => {
+  ui.showInfoModal();
 });
 
 attachSwipeControls(document.querySelector('.board-wrap'), (dir) => {
   if (state.screen !== 'game') return;
   sendMove(dir);
-});
-
-document.querySelector('#log-toggle').addEventListener('click', () => {
-  state.logExpanded = !state.logExpanded;
-  ui.renderLog();
 });
 
 document.querySelector('#spectate-options').addEventListener('click', (event) => {

@@ -152,14 +152,25 @@
           </div>
           <div class="stat">
             <div class="label">Вид</div>
-            <div
-              id="view-toggle"
-              class="view-toggle"
-              role="group"
-              aria-label="Режим отображения"
-            >
-              <button type="button" data-view="2d" aria-pressed="true">2D</button>
-              <button type="button" data-view="3d" aria-pressed="false">3D</button>
+            <div class="view-row">
+              <div
+                id="view-toggle"
+                class="view-toggle"
+                role="group"
+                aria-label="Режим отображения"
+              >
+                <button type="button" data-view="2d" aria-pressed="true">2D</button>
+                <button type="button" data-view="3d" aria-pressed="false">3D</button>
+              </div>
+              <button
+                id="info-button"
+                class="info-button"
+                type="button"
+                aria-label="Информация об игре"
+                aria-haspopup="dialog"
+              >
+                i
+              </button>
             </div>
           </div>
         </header>
@@ -199,12 +210,6 @@
           </aside>
         </main>
 
-        <div class="dpad" id="controls">
-          <button data-dir="up" type="button" aria-label="Вверх">↑</button>
-          <button data-dir="left" type="button" aria-label="Влево">←</button>
-          <button data-dir="down" type="button" aria-label="Вниз">↓</button>
-          <button data-dir="right" type="button" aria-label="Вправо">→</button>
-        </div>
         <button
           id="back-to-lobby-button"
           class="secondary"
@@ -213,14 +218,6 @@
         >
           В лобби
         </button>
-        <p class="hint muted">
-          Вид переключается между 2D и 3D кнопками в верхней панели.
-          Управление: стрелки, WASD или свайпы по карте. Ход или действие стоит 1 энергию,
-          каждый круг начисляется +1. Проигравший бой теряет 3 энергии и
-          становится поверженным: на его клетку можно заступить, пока он
-          пропускает ходы. Обычный соперник всегда вызывает обмен или бой.
-          Видно только 8 соседних клеток — исследованная карта запоминается.
-        </p>
       </section>
 
       <div id="modal-root"></div>

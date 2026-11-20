@@ -33,9 +33,7 @@ export function measureBoardArea(canvas) {
       const paddingBottom = parseFloat(screenStyle.paddingBottom) || 0;
       const reserve = columnLayout
         ? paddingBottom + 12
-        : visibleHeight(screen.querySelector('.dpad')) +
-          visibleHeight(screen.querySelector('.hint')) +
-          visibleHeight(screen.querySelector('#back-to-lobby-button')) +
+        : visibleHeight(screen.querySelector('#back-to-lobby-button')) +
           paddingBottom +
           24;
       const wrapperTop = wrapperRect.top + window.scrollY;
