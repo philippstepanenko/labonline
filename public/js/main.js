@@ -4,10 +4,14 @@ import { ViewManager } from './view.js';
 import { attachSwipeControls } from './swipe.js';
 import * as ui from './ui.js';
 
-if (window.matchMedia('(max-width: 560px)').matches) {
+const mobileQuery = window.matchMedia('(max-width: 560px)');
+if (mobileQuery.matches) {
   state.playersCollapsed = true;
   state.eventsCollapsed = true;
 }
+mobileQuery.addEventListener('change', () => {
+  if (state.screen === 'game') ui.renderGame();
+});
 
 const view = new ViewManager({
   canvas2d: document.querySelector('#board'),

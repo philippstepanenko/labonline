@@ -831,10 +831,12 @@ button.secondary {
 
   .stat-you {
     grid-column: span 2;
+    order: 5;
   }
 
   .stat-view {
     grid-column: span 1;
+    order: 4;
     padding: 6px;
     display: flex;
     align-items: center;
@@ -883,6 +885,33 @@ button.secondary {
   #game-screen {
     padding: 12px 12px 18px;
     gap: 10px;
+  }
+
+  .stat-you,
+  .stat-view {
+    height: 64px;
+    overflow: hidden;
+  }
+
+  #you-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+
+  #you-info .you-name,
+  #you-info .you-status {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #you-info .you-status {
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 500;
+    line-height: 1.2;
   }
 
   .card {

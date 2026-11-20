@@ -204,25 +204,46 @@ export function renderGame() {
   $('#energy-info').title = watched ? `Энергия: ${watched.name}` : '';
 
   const you = state.you;
-  let youText = you ? you.name : '—';
+  const mobile = window.matchMedia('(max-width: 560px)').matches;
+  const youName = you ? you.name : '—';
+  let youStatus = '';
+  let youShortStatus = '—';
+
   if (you) {
     if (state.spectate) {
-      youText += ' — сбежал, наблюдает';
+      youStatus = 'сбежал, наблюдает';
+      youShortStatus = 'наблюдает';
     } else if (you.pending === 'choose') {
-      youText += ' — выберите действие';
+      youStatus = 'выберите действие';
+      youShortStatus = 'выбор';
     } else if (you.pending === 'wait') {
-      youText += ' — ждём ответа';
+      youStatus = 'ждём ответа';
+      youShortStatus = 'ждём';
     } else if (you.pending === 'respond') {
-      youText += ' — вам предложили обмен';
+      youStatus = 'вам предложили обмен';
+      youShortStatus = 'обмен';
     } else if (you.defeated && you.energy < 1) {
-      youText += ' — повержен, ход пропускается';
+      youStatus = 'повержен, ход пропускается';
+      youShortStatus = 'повержен';
     } else if (you.energy < 1) {
-      youText += ' — нет энергии, ход пропускается';
+      youStatus = 'нет энергии, ход пропускается';
+      youShortStatus = 'нет энергии';
     } else if (you.pos && state.phase === 'over') {
-      youText += ' — игра окончена';
+      youStatus = 'игра окончена';
+      youShortStatus = 'игра окончена';
+    } else {
+      youShortStatus = 'в игре';
     }
   }
-  $('#you-info').textContent = youText;
+
+  const youInfo = $('#you-info');
+  const fullYouText = youStatus ? `${youName} — ${youStatus}` : youName;
+  youInfo.title = fullYouText;
+  if (mobile) {
+    youInfo.innerHTML = `<span class="you-name">${escapeHtml(youName)}</span><span class="you-status">${escapeHtml(youShortStatus)}</span>`;
+  } else {
+    youInfo.textContent = fullYouText;
+  }
 
   renderSpectate();
   renderPlayers();
