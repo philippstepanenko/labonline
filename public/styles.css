@@ -65,6 +65,10 @@ p {
   color: var(--muted);
 }
 
+.label-narrow {
+  display: none;
+}
+
 .error {
   color: #ff8b9c;
   margin: 12px 0 0;
@@ -766,6 +770,50 @@ button.secondary {
     padding: 14px 14px 22px;
   }
 
+  .topbar {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .stat {
+    min-width: 0;
+    padding: 8px 10px;
+  }
+
+  .stat .label {
+    font-size: 10px;
+  }
+
+  .stat .value {
+    font-size: 14px;
+    overflow-wrap: anywhere;
+  }
+
+  .stat-you {
+    grid-column: span 2;
+  }
+
+  .stat-view {
+    grid-column: span 1;
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .stat-view .label {
+    display: none;
+  }
+
+  .label-wide {
+    display: none;
+  }
+
+  .label-narrow {
+    display: inline;
+  }
+
   .board-area {
     flex-direction: column;
     align-items: stretch;
@@ -793,6 +841,11 @@ button.secondary {
     padding: 16px;
   }
 
+  #game-screen {
+    padding: 12px 12px 18px;
+    gap: 10px;
+  }
+
   .card {
     padding: 22px;
   }
@@ -805,7 +858,35 @@ button.secondary {
     grid-template-columns: 1fr;
   }
 
+  .view-row {
+    gap: 4px;
+    margin-top: 0;
+  }
+
+  .view-toggle button {
+    padding: 4px 6px;
+    font-size: 12px;
+  }
+
+  .info-button {
+    width: 26px;
+    height: 26px;
+    font-size: 13px;
+  }
+
   .modal-actions button {
     flex-basis: 100%;
+  }
+}
+
+@media (max-width: 380px) {
+  .view-toggle button {
+    padding: 3px 4px;
+    font-size: 11px;
+  }
+
+  .info-button {
+    width: 24px;
+    height: 24px;
   }
 }
