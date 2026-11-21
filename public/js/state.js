@@ -16,8 +16,11 @@ export const state = {
   known: new Map(),
   visibleNow: new Set(),
   turn: null,
+  nextTurn: null,
   you: null,
   players: [],
+  playersCollapsed: false,
+  eventsCollapsed: false,
   exitsRemaining: 0,
   log: [],
   logExpanded: false,
@@ -62,6 +65,7 @@ export function resetForStart(message) {
   state.known = new Map();
   state.visibleNow = new Set();
   state.turn = null;
+  state.nextTurn = null;
   state.you = null;
   state.players = [];
   state.log = [];
@@ -76,6 +80,7 @@ export function applyState(message) {
   state.width = message.width;
   state.height = message.height;
   state.turn = message.turn;
+  state.nextTurn = message.nextTurn ?? null;
   state.you = message.you;
   state.players = message.players;
   state.exitsRemaining = message.exitsRemaining;

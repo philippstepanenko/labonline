@@ -15,6 +15,7 @@ const FLOOR_THICKNESS = 0.08;
 const PLAYER_RADIUS = 0.22;
 const PLAYER_LENGTH = 0.32;
 const CAMERA_DISTANCE = 60;
+const MIN_VIEWPORT_SIZE = 120;
 
 function hslColor(hue) {
   return new THREE.Color().setHSL(hue / 360, 0.7, 0.52);
@@ -170,8 +171,8 @@ export class ThreeRenderer {
 
   updateViewport(width, height) {
     const area = measureBoardArea(this.canvas);
-    const cssWidth = Math.max(240, area.width);
-    const cssHeight = Math.max(240, area.height);
+    const cssWidth = Math.max(MIN_VIEWPORT_SIZE, area.width);
+    const cssHeight = Math.max(MIN_VIEWPORT_SIZE, area.height);
     const aspect = cssWidth / cssHeight;
 
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));

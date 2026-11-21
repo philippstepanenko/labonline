@@ -65,6 +65,7 @@ export interface StateMessage {
   width: number;
   height: number;
   turn: NamedPlayer | null;
+  nextTurn: NamedPlayer | null;
   you: {
     id: string;
     name: string;

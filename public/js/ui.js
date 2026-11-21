@@ -1,4 +1,4 @@
-import { state, canMove, hueForPlayer } from './state.js';
+import { state, hueForPlayer } from './state.js';
 import { PLAYER_COLORS, playerColorName } from './palette.js';
 
 const ESCAPE_MAP = {
@@ -204,30 +204,50 @@ export function renderGame() {
   $('#energy-info').title = watched ? `Энергия: ${watched.name}` : '';
 
   const you = state.you;
-  let youText = you ? you.name : '—';
+  const mobile = window.matchMedia('(max-width: 560px)').matches;
+  const youName = you ? you.name : '—';
+  let youStatus = '';
+  let youShortStatus = '—';
+
   if (you) {
     if (state.spectate) {
-      youText += ' — сбежал, наблюдает';
+      youStatus = 'сбежал, наблюдает';
+      youShortStatus = 'наблюдает';
     } else if (you.pending === 'choose') {
-      youText += ' — выберите действие';
+      youStatus = 'выберите действие';
+      youShortStatus = 'выбор';
     } else if (you.pending === 'wait') {
-      youText += ' — ждём ответа';
+      youStatus = 'ждём ответа';
+      youShortStatus = 'ждём';
     } else if (you.pending === 'respond') {
-      youText += ' — вам предложили обмен';
+      youStatus = 'вам предложили обмен';
+      youShortStatus = 'обмен';
     } else if (you.defeated && you.energy < 1) {
-      youText += ' — повержен, ход пропускается';
+      youStatus = 'повержен, ход пропускается';
+      youShortStatus = 'повержен';
     } else if (you.energy < 1) {
-      youText += ' — нет энергии, ход пропускается';
+      youStatus = 'нет энергии, ход пропускается';
+      youShortStatus = 'нет энергии';
     } else if (you.pos && state.phase === 'over') {
-      youText += ' — игра окончена';
+      youStatus = 'игра окончена';
+      youShortStatus = 'игра окончена';
+    } else {
+      youShortStatus = 'в игре';
     }
   }
-  $('#you-info').textContent = youText;
+
+  const youInfo = $('#you-info');
+  const fullYouText = youStatus ? `${youName} — ${youStatus}` : youName;
+  youInfo.title = fullYouText;
+  if (mobile) {
+    youInfo.innerHTML = `<span class="you-name">${escapeHtml(youName)}</span><span class="you-status">${escapeHtml(youShortStatus)}</span>`;
+  } else {
+    youInfo.textContent = fullYouText;
+  }
 
   renderSpectate();
   renderPlayers();
   renderLog();
-  renderControls();
 }
 
 function renderSpectate() {
@@ -254,6 +274,31 @@ function renderSpectate() {
     spectate.mode === 'auto'
       ? `Авто: ${escapeHtml(spectate.targetName)}`
       : `Смотрите за ${escapeHtml(spectate.targetName)}`;
+}
+
+function namedPlayerLabel(player) {
+  if (!player) return '—';
+  return player.id === state.youId ? `${player.name} (вы)` : player.name;
+}
+
+function playersSummaryText() {
+  if (state.phase === 'over') return 'Игра окончена';
+
+  const current = state.turn;
+  const next = state.nextTurn;
+  if (!current && !next) return 'Ход не определён';
+
+  const parts = [];
+  if (current) parts.push(`Сейчас: ${namedPlayerLabel(current)}`);
+  if (next) parts.push(`далее: ${namedPlayerLabel(next)}`);
+  return parts.join(' · ');
+}
+
+function updatePanelToggle(toggle, collapsed, expandLabel, collapseLabel) {
+  if (!toggle) return;
+  toggle.setAttribute('aria-expanded', String(!collapsed));
+  toggle.setAttribute('aria-label', collapsed ? expandLabel : collapseLabel);
+  toggle.textContent = collapsed ? '▸' : '▾';
 }
 
 function renderPlayers() {
@@ -285,6 +330,19 @@ function renderPlayers() {
       </li>`;
     })
     .join('');
+
+  const summary = $('#players-summary');
+  if (summary) {
+    summary.textContent = playersSummaryText();
+    summary.hidden = !state.playersCollapsed;
+  }
+  list.hidden = state.playersCollapsed;
+  updatePanelToggle(
+    $('#players-toggle'),
+    state.playersCollapsed,
+    'Развернуть игроков',
+    'Свернуть игроков',
+  );
 }
 
 const COMPACT_LOG_ENTRIES = 5;
@@ -295,10 +353,9 @@ export function renderLog() {
   const toggle = $('#log-toggle');
   if (!log || !toggle) return;
 
+  const mobile = window.matchMedia('(max-width: 560px)').matches;
   const expanded = state.logExpanded;
-  const compactLimit = window.matchMedia('(max-width: 560px)').matches
-    ? MOBILE_LOG_ENTRIES
-    : COMPACT_LOG_ENTRIES;
+  const compactLimit = mobile ? MOBILE_LOG_ENTRIES : COMPACT_LOG_ENTRIES;
   const entries = expanded ? state.log : state.log.slice(-compactLimit);
   const previousScrollTop = log.scrollTop;
   const wasAtBottom =
@@ -309,25 +366,65 @@ export function renderLog() {
   log.innerHTML = entries
     .map((entry) => `<li>${escapeHtml(entry)}</li>`)
     .join('');
+  log.hidden = state.eventsCollapsed;
 
-  toggle.hidden = state.log.length <= compactLimit;
-  toggle.textContent = expanded ? 'Свернуть' : 'Показать все';
+  toggle.hidden = state.eventsCollapsed || state.log.length <= compactLimit;
+  toggle.textContent = expanded ? 'Свернуть' : mobile ? 'Все' : 'Показать все';
   toggle.setAttribute('aria-expanded', String(expanded));
+
+  const summary = $('#log-summary');
+  if (summary) {
+    summary.textContent = state.log.length
+      ? state.log[state.log.length - 1]
+      : 'Пока событий нет';
+    summary.hidden = !state.eventsCollapsed;
+  }
+  updatePanelToggle(
+    $('#events-toggle'),
+    state.eventsCollapsed,
+    'Развернуть события',
+    'Свернуть события',
+  );
 
   if (expanded) {
     log.scrollTop = wasAtBottom ? log.scrollHeight : previousScrollTop;
   }
 }
 
-export function renderControls() {
-  const enabled = canMove();
-  for (const button of document.querySelectorAll('#controls button')) {
-    button.disabled = !enabled;
-  }
-}
-
 export function closeModal() {
   $('#modal-root').innerHTML = '';
+}
+
+export function showInfoModal() {
+  const root = $('#modal-root');
+  root.innerHTML = `<div class="overlay">
+    <div class="card modal" role="dialog" aria-modal="true" aria-labelledby="info-title">
+      <h2 id="info-title">Правила игры</h2>
+      <p class="muted">
+        Ход или действие стоит 1 энергию, каждый круг начисляется +1.
+      </p>
+      <p class="muted">
+        Проигравший бой теряет 3 энергии и становится поверженным: на его
+        клетку можно заступить, пока он пропускает ходы.
+      </p>
+      <p class="muted">Обычный соперник всегда вызывает обмен или бой.</p>
+      <p class="muted">
+        Видно только 8 соседних клеток — исследованная карта запоминается.
+      </p>
+      <div class="modal-actions">
+        <button type="button" data-action="close">Понятно</button>
+      </div>
+    </div>
+  </div>`;
+
+  root
+    .querySelector('[data-action="close"]')
+    .addEventListener('click', closeModal);
+
+  const overlay = root.querySelector('.overlay');
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay) closeModal();
+  });
 }
 
 export function showChoiceModal(message, onChoose) {

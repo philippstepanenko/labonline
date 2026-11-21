@@ -1,11 +1,21 @@
 const FALLBACK_BOTTOM_RESERVE = 300;
 const MIN_BOARD_HEIGHT = 220;
+const MIN_MOBILE_BOARD_HEIGHT = 120;
 
 function visibleHeight(element) {
   if (!element) return 0;
   const style = window.getComputedStyle(element);
   if (style.display === 'none' || style.visibility === 'hidden') return 0;
   return element.offsetHeight;
+}
+
+function rowGap(element, fallback = 0) {
+  if (!element) return fallback;
+  const style = window.getComputedStyle(element);
+  const gap = parseFloat(style.rowGap);
+  if (Number.isFinite(gap)) return gap;
+  const shorthand = parseFloat(style.gap);
+  return Number.isFinite(shorthand) ? shorthand : fallback;
 }
 
 export function measureBoardArea(canvas) {
@@ -29,20 +39,39 @@ export function measureBoardArea(canvas) {
 
     if (screenRect.height > 0 && width > 0) {
       const columnLayout = window.matchMedia('(max-width: 860px)').matches;
+      const fixedBackButton = window.matchMedia('(max-width: 560px)').matches;
       const screenStyle = window.getComputedStyle(screen);
       const paddingBottom = parseFloat(screenStyle.paddingBottom) || 0;
-      const reserve = columnLayout
-        ? paddingBottom + 12
-        : visibleHeight(screen.querySelector('.dpad')) +
-          visibleHeight(screen.querySelector('.hint')) +
-          visibleHeight(screen.querySelector('#back-to-lobby-button')) +
-          paddingBottom +
-          24;
+      const backButton = screen.querySelector('#back-to-lobby-button');
+      const backHeight = visibleHeight(backButton);
+
+      let reserve;
+      if (columnLayout) {
+        const sidebarHeight = visibleHeight(screen.querySelector('.sidebar'));
+        const boardGap = rowGap(wrapper.parentElement, 18);
+        const screenGap = rowGap(screen, 0);
+        const backStyle = backButton ? window.getComputedStyle(backButton) : null;
+        const backMargin = backStyle
+          ? (parseFloat(backStyle.marginTop) || 0) +
+            (parseFloat(backStyle.marginBottom) || 0)
+          : 0;
+        const backReserve =
+          !fixedBackButton && backHeight > 0
+            ? backHeight + backMargin + screenGap
+            : 0;
+        reserve = paddingBottom + sidebarHeight + boardGap + backReserve;
+      } else {
+        reserve = backHeight + paddingBottom + 24;
+      }
+
       const wrapperTop = wrapperRect.top + window.scrollY;
       const measured = window.innerHeight - wrapperTop - reserve;
 
       if (Number.isFinite(measured) && measured > 0) {
-        height = Math.max(MIN_BOARD_HEIGHT, measured);
+        const minHeight = columnLayout
+          ? MIN_MOBILE_BOARD_HEIGHT
+          : MIN_BOARD_HEIGHT;
+        height = Math.max(minHeight, measured);
       }
     }
   }

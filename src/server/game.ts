@@ -424,6 +424,10 @@ export class Game {
     const turn: NamedPlayer | null = turnPlayer
       ? { id: turnPlayer.id, name: turnPlayer.name }
       : null;
+    const nextPlayer = this.nextPlayer();
+    const nextTurn: NamedPlayer | null = nextPlayer
+      ? { id: nextPlayer.id, name: nextPlayer.name }
+      : null;
 
     return {
       type: 'state',
@@ -431,6 +435,7 @@ export class Game {
       width: this.width,
       height: this.height,
       turn,
+      nextTurn,
       you: {
         id: player.id,
         name: player.name,
@@ -480,6 +485,25 @@ export class Game {
     if (this.currentPhase !== 'playing') return null;
     const id = this.order[this.turnIndex];
     return id ? (this.byId.get(id) ?? null) : null;
+  }
+
+  private nextPlayer(): GamePlayer | null {
+    if (this.currentPhase !== 'playing') return null;
+    const count = this.order.length;
+    if (count === 0) return null;
+
+    let fallback: GamePlayer | null = null;
+
+    for (let step = 1; step < count; step++) {
+      const player = this.byId.get(
+        this.order[(this.turnIndex + step) % count],
+      );
+      if (!player || !player.active) continue;
+      fallback ??= player;
+      if (player.energy >= 1) return player;
+    }
+
+    return fallback;
   }
 
   private resolveSpectate(player: GamePlayer): SpectateTarget | null {

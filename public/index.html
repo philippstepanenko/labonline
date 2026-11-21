@@ -134,32 +134,46 @@
 
       <section id="game-screen" class="screen" hidden>
         <header class="topbar">
-          <div class="stat">
+          <div class="stat stat-turn">
             <div class="label">Ход</div>
             <div id="turn-info" class="value">—</div>
           </div>
-          <div class="stat">
-            <div class="label">Выходов осталось</div>
+          <div class="stat stat-exits">
+            <div class="label">
+              <span class="label-wide">Выходов осталось</span>
+              <span class="label-narrow">Выходов</span>
+            </div>
             <div id="exits-info" class="value">—</div>
           </div>
-          <div class="stat">
+          <div class="stat stat-energy">
             <div class="label">Энергия</div>
             <div id="energy-info" class="value">—</div>
           </div>
-          <div class="stat">
+          <div class="stat stat-you">
             <div class="label">Вы</div>
             <div id="you-info" class="value">—</div>
           </div>
-          <div class="stat">
+          <div class="stat stat-view">
             <div class="label">Вид</div>
-            <div
-              id="view-toggle"
-              class="view-toggle"
-              role="group"
-              aria-label="Режим отображения"
-            >
-              <button type="button" data-view="2d" aria-pressed="true">2D</button>
-              <button type="button" data-view="3d" aria-pressed="false">3D</button>
+            <div class="view-row">
+              <div
+                id="view-toggle"
+                class="view-toggle"
+                role="group"
+                aria-label="Режим отображения"
+              >
+                <button type="button" data-view="2d" aria-pressed="true">2D</button>
+                <button type="button" data-view="3d" aria-pressed="false">3D</button>
+              </div>
+              <button
+                id="info-button"
+                class="info-button"
+                type="button"
+                aria-label="Информация об игре"
+                aria-haspopup="dialog"
+              >
+                i
+              </button>
             </div>
           </div>
         </header>
@@ -177,34 +191,54 @@
               <p id="spectate-hint" class="muted"></p>
             </section>
             <section class="panel">
-              <h2>Игроки</h2>
+              <div class="panel-header">
+                <h2>Игроки</h2>
+                <button
+                  id="players-toggle"
+                  class="panel-toggle"
+                  type="button"
+                  aria-controls="players-panel"
+                  aria-expanded="true"
+                  aria-label="Свернуть игроков"
+                >
+                  ▾
+                </button>
+              </div>
+              <p id="players-summary" class="panel-summary" hidden></p>
               <ul id="players-panel" class="players-list compact"></ul>
             </section>
             <section class="panel">
               <div class="panel-header">
                 <h2>События</h2>
-                <button
-                  id="log-toggle"
-                  class="log-toggle"
-                  type="button"
-                  aria-controls="log-panel"
-                  aria-expanded="false"
-                  hidden
-                >
-                  Показать все
-                </button>
+                <div class="panel-actions">
+                  <button
+                    id="log-toggle"
+                    class="log-toggle"
+                    type="button"
+                    aria-controls="log-panel"
+                    aria-expanded="false"
+                    hidden
+                  >
+                    Показать все
+                  </button>
+                  <button
+                    id="events-toggle"
+                    class="panel-toggle"
+                    type="button"
+                    aria-controls="log-panel"
+                    aria-expanded="true"
+                    aria-label="Свернуть события"
+                  >
+                    ▾
+                  </button>
+                </div>
               </div>
+              <p id="log-summary" class="panel-summary" hidden></p>
               <ol id="log-panel" class="log log-compact"></ol>
             </section>
           </aside>
         </main>
 
-        <div class="dpad" id="controls">
-          <button data-dir="up" type="button" aria-label="Вверх">↑</button>
-          <button data-dir="left" type="button" aria-label="Влево">←</button>
-          <button data-dir="down" type="button" aria-label="Вниз">↓</button>
-          <button data-dir="right" type="button" aria-label="Вправо">→</button>
-        </div>
         <button
           id="back-to-lobby-button"
           class="secondary"
@@ -213,14 +247,6 @@
         >
           В лобби
         </button>
-        <p class="hint muted">
-          Вид переключается между 2D и 3D кнопками в верхней панели.
-          Управление: стрелки или WASD. Ход или действие стоит 1 энергию,
-          каждый круг начисляется +1. Проигравший бой теряет 3 энергии и
-          становится поверженным: на его клетку можно заступить, пока он
-          пропускает ходы. Обычный соперник всегда вызывает обмен или бой.
-          Видно только 8 соседних клеток — исследованная карта запоминается.
-        </p>
       </section>
 
       <div id="modal-root"></div>
