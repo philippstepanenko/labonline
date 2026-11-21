@@ -252,17 +252,20 @@ document.querySelector('#leave-room-button').addEventListener('click', () => {
 document.querySelector('#log-toggle').addEventListener('click', () => {
   state.logExpanded = !state.logExpanded;
   ui.renderLog();
+  view.scheduleResize(true);
 });
 
 document.querySelector('#players-toggle').addEventListener('click', () => {
   state.playersCollapsed = !state.playersCollapsed;
   ui.renderGame();
+  view.scheduleResize(true);
 });
 
 document.querySelector('#events-toggle').addEventListener('click', () => {
   state.eventsCollapsed = !state.eventsCollapsed;
   if (state.eventsCollapsed) state.logExpanded = false;
   ui.renderGame();
+  view.scheduleResize(true);
 });
 
 document.querySelector('#info-button').addEventListener('click', () => {
