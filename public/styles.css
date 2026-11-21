@@ -887,6 +887,27 @@ button.secondary {
     gap: 10px;
   }
 
+  #back-to-lobby-button {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    z-index: 90;
+    width: fit-content;
+    max-width: calc(100vw - 32px);
+    margin: 0 auto;
+    padding: 12px 28px;
+    background: rgba(15, 22, 34, 0.82);
+    border-color: rgba(79, 140, 255, 0.35);
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  #back-to-lobby-button:disabled {
+    opacity: 0.7;
+  }
+
   .stat-you,
   .stat-view {
     height: 64px;

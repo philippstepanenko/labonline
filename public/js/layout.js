@@ -39,6 +39,7 @@ export function measureBoardArea(canvas) {
 
     if (screenRect.height > 0 && width > 0) {
       const columnLayout = window.matchMedia('(max-width: 860px)').matches;
+      const fixedBackButton = window.matchMedia('(max-width: 560px)').matches;
       const screenStyle = window.getComputedStyle(screen);
       const paddingBottom = parseFloat(screenStyle.paddingBottom) || 0;
       const backButton = screen.querySelector('#back-to-lobby-button');
@@ -55,7 +56,9 @@ export function measureBoardArea(canvas) {
             (parseFloat(backStyle.marginBottom) || 0)
           : 0;
         const backReserve =
-          backHeight > 0 ? backHeight + backMargin + screenGap : 0;
+          !fixedBackButton && backHeight > 0
+            ? backHeight + backMargin + screenGap
+            : 0;
         reserve = paddingBottom + sidebarHeight + boardGap + backReserve;
       } else {
         reserve = backHeight + paddingBottom + 24;
