@@ -994,3 +994,11 @@ button.secondary {
     height: 24px;
   }
 }
+
+@media (min-width: 861px) {
+  #back-to-lobby-button {
+    position: relative;
+    top: -108px;
+    z-index: 2;
+  }
+}
