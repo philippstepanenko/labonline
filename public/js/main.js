@@ -11,6 +11,7 @@ if (mobileQuery.matches) {
 }
 mobileQuery.addEventListener('change', () => {
   if (state.screen === 'game') ui.renderGame();
+  scheduleBackToLobbyOffset();
 });
 
 const view = new ViewManager({
@@ -19,6 +20,54 @@ const view = new ViewManager({
   toggleRoot: document.querySelector('#view-toggle'),
 });
 view.attach();
+
+const gameSidebar = document.querySelector('.sidebar');
+const backToLobbyButton = document.querySelector('#back-to-lobby-button');
+let backButtonOffsetFrame = 0;
+
+function updateBackToLobbyOffset() {
+  if (!backToLobbyButton) return;
+
+  if (!mobileQuery.matches || backToLobbyButton.hidden || !gameSidebar) {
+    backToLobbyButton.style.removeProperty('--back-button-offset');
+    return;
+  }
+
+  const sidebarTop = gameSidebar.getBoundingClientRect().top;
+  const maxOffset = Math.max(
+    0,
+    window.innerHeight - backToLobbyButton.offsetHeight - 24,
+  );
+  const offset = Math.min(
+    maxOffset,
+    Math.max(0, window.innerHeight - sidebarTop),
+  );
+
+  backToLobbyButton.style.setProperty('--back-button-offset', `${offset}px`);
+}
+
+function scheduleBackToLobbyOffset() {
+  if (backButtonOffsetFrame) return;
+  backButtonOffsetFrame = window.requestAnimationFrame(() => {
+    backButtonOffsetFrame = 0;
+    updateBackToLobbyOffset();
+  });
+}
+
+if (typeof ResizeObserver !== 'undefined' && gameSidebar) {
+  new ResizeObserver(scheduleBackToLobbyOffset).observe(gameSidebar);
+}
+
+window.addEventListener(
+  'scroll',
+  () => {
+    if (backToLobbyButton && !backToLobbyButton.hidden) {
+      scheduleBackToLobbyOffset();
+    }
+  },
+  { passive: true },
+);
+
 const joinButton = document.querySelector('#join-form button[type="submit"]');
 const createButton = document.querySelector(
   '#create-room-form button[type="submit"]',
@@ -135,6 +184,7 @@ function handleMessage(message) {
         () => {
           ui.closeModal();
           ui.showBackToLobby();
+          updateBackToLobbyOffset();
         },
         () => {
           connection.send({ type: 'backToLobby' });
@@ -300,6 +350,7 @@ document
       (player) => player.connected && player.id !== state.youId,
     ).length;
     ui.showWaitingForLobby(others);
+    updateBackToLobbyOffset();
     ensureConnection().send({ type: 'backToLobby' });
   });
 
@@ -335,4 +386,5 @@ window.addEventListener('resize', () => {
     view.scheduleResize(true);
     ui.renderLog();
   }
+  scheduleBackToLobbyOffset();
 });

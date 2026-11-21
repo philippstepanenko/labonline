@@ -891,7 +891,9 @@ button.secondary {
     position: fixed;
     left: 0;
     right: 0;
-    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(
+      32px + env(safe-area-inset-bottom, 0px) + var(--back-button-offset, 0px)
+    );
     z-index: 90;
     width: fit-content;
     max-width: calc(100vw - 32px);
