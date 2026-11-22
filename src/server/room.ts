@@ -1,6 +1,6 @@
 import { randomInt, randomUUID } from 'node:crypto';
 import { normalizeMazeSize, type Config } from '../shared/config';
-import { isPlayerHue, pickFreeHue } from '../shared/colors';
+import { isPlayerHue, pickFreeHue, pickRandomFreeHue } from '../shared/colors';
 import type {
   ClientMessage,
   Dir,
@@ -201,7 +201,7 @@ export class Room {
     const player: RoomPlayer = {
       id: `bot-${randomUUID()}`,
       name: this.nextBotName(),
-      hue: pickFreeHue(
+      hue: pickRandomFreeHue(
         [...this.players.values()].map((existing) => existing.hue),
       ),
       send: () => {},
