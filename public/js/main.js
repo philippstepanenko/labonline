@@ -284,6 +284,16 @@ document.querySelector('#color-options').addEventListener('click', (event) => {
   ensureConnection().send({ type: 'setColor', hue: Number(button.dataset.hue) });
 });
 
+document.querySelector('#add-bot-button').addEventListener('click', () => {
+  ensureConnection().send({ type: 'addBot' });
+});
+
+document.querySelector('#lobby-players').addEventListener('click', (event) => {
+  const button = event.target.closest('button[data-bot-id]');
+  if (!button) return;
+  ensureConnection().send({ type: 'removeBot', botId: button.dataset.botId });
+});
+
 document.querySelector('#ready-button').addEventListener('click', () => {
   const me = state.lobby
     ? state.lobby.players.find((player) => player.id === state.youId)

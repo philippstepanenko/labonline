@@ -206,6 +206,27 @@ form label {
   gap: 8px;
 }
 
+.bot-controls {
+  margin: -8px 0 16px;
+}
+
+.bot-controls button {
+  width: 100%;
+}
+
+.remove-bot-button {
+  padding: 4px 9px;
+  border-radius: 8px;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--muted);
+}
+
+.remove-bot-button:hover:not(:disabled) {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
 .players-list li {
   display: flex;
   align-items: center;

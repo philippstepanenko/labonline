@@ -40,6 +40,7 @@ export interface GamePlayer {
   energy: number;
   defeated: boolean;
   pos: Point;
+  bot?: boolean;
   known?: Map<string, CellChar>;
 }
 
@@ -52,7 +53,7 @@ type SpectateTarget = {
   target: GamePlayer;
 };
 
-type PendingInteraction = {
+export type PendingInteraction = {
   initiatorId: string;
   targetId: string;
   dir: Dir;
@@ -74,6 +75,7 @@ export interface DebugPlayer {
   active: boolean;
   escaped: boolean;
   connected: boolean;
+  bot: boolean;
   energy: number;
   defeated: boolean;
 }
@@ -414,6 +416,7 @@ export class Game {
       escaped: other.escaped,
       active: other.active,
       connected: other.connected,
+      bot: Boolean(other.bot),
       energy: other.energy,
       defeated: other.defeated,
       isTurn: this.currentPlayerId === other.id,
@@ -474,11 +477,17 @@ export class Game {
         active: player.active,
         escaped: player.escaped,
         connected: player.connected,
+        bot: Boolean(player.bot),
         energy: player.energy,
         defeated: player.defeated,
       })),
       exitsRemaining: this.exits.size,
     };
+  }
+
+  knownFor(playerId: string): Map<string, CellChar> {
+    const player = this.byId.get(playerId);
+    return new Map(player?.known ?? []);
   }
 
   private currentPlayer(): GamePlayer | null {
@@ -682,7 +691,7 @@ export class Game {
     );
 
     for (const player of this.players) {
-      if (player.connected) {
+      if (player.connected && !player.bot) {
         this.sendTo(player, { type: 'gameOver', escaped, losers });
       }
     }
@@ -743,7 +752,7 @@ export class Game {
     });
 
     for (const player of this.players) {
-      if (!player.connected) continue;
+      if (!player.connected || player.bot) continue;
       this.sendTo(player, {
         type: 'start',
         youId: player.id,
@@ -757,7 +766,7 @@ export class Game {
 
   private broadcastState(): void {
     for (const player of this.players) {
-      if (!player.connected) continue;
+      if (!player.connected || player.bot) continue;
       this.sendTo(player, this.snapshotFor(player.id));
     }
   }
@@ -768,7 +777,7 @@ export class Game {
       this.log = this.log.slice(this.log.length - MAX_LOG_ENTRIES);
     }
     for (const player of this.players) {
-      if (!player.connected) continue;
+      if (!player.connected || player.bot) continue;
       this.sendTo(player, { type: 'event', kind, message });
     }
   }
