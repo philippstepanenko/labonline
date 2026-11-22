@@ -114,10 +114,15 @@ export function renderLobby(message) {
     .map((player) => {
       const isYou = player.id === state.youId;
       const isOwner = player.id === message.ownerId;
+      const canRemove = player.bot && message.ownerId === state.youId;
+      const removeButton = canRemove
+        ? `<button type="button" class="remove-bot-button secondary" data-bot-id="${escapeHtml(player.id)}" title="Удалить бота" aria-label="Удалить бота">×</button>`
+        : '';
       return `<li class="${player.ready ? 'ready' : ''}">
         <span class="dot" style="--hue: ${hueForPlayer(player)}"></span>
-        <span class="player-name">${escapeHtml(player.name)}${isYou ? ' <span class="you-tag">вы</span>' : ''}${isOwner ? ' <span class="you-tag">владелец</span>' : ''}</span>
+        <span class="player-name">${escapeHtml(player.name)}${isYou ? ' <span class="you-tag">вы</span>' : ''}${isOwner ? ' <span class="you-tag">владелец</span>' : ''}${player.bot ? ' <span class="you-tag">бот</span>' : ''}</span>
         <span class="badge ${player.ready ? 'badge-ready' : ''}">${player.ready ? 'готов' : 'ждём'}</span>
+        ${removeButton}
       </li>`;
     })
     .join('');
@@ -135,6 +140,9 @@ export function renderLobby(message) {
   sizeForm.hidden = !isOwner;
   $('#maze-width').value = String(message.mazeWidth);
   $('#maze-height').value = String(message.mazeHeight);
+
+  $('#bot-controls').hidden = !isOwner;
+  $('#add-bot-button').disabled = message.players.length >= message.maxPlayers;
 
   const hint = $('#lobby-hint');
   if (message.canStart) {
@@ -307,6 +315,7 @@ function renderPlayers() {
     .map((player) => {
       const tags = [`энергия: ${player.energy}`];
       if (player.id === state.youId) tags.push('вы');
+      if (player.bot) tags.push('бот');
       if (player.isTurn && state.phase === 'playing') tags.push('ходит');
       if (player.id === state.watchedId) tags.push('наблюдаете');
       if (player.escaped) tags.push('сбежал');

@@ -35,6 +35,10 @@ function isClientMessage(value: unknown): value is ClientMessage {
       return typeof value.name === 'string' && typeof value.roomId === 'string';
     case 'leaveRoom':
       return true;
+    case 'addBot':
+      return true;
+    case 'removeBot':
+      return typeof value.botId === 'string';
     case 'setMazeSize':
       return typeof value.width === 'number' && typeof value.height === 'number';
     case 'setColor':

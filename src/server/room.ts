@@ -1,6 +1,6 @@
-import { randomInt } from 'node:crypto';
+import { randomInt, randomUUID } from 'node:crypto';
 import { normalizeMazeSize, type Config } from '../shared/config';
-import { isPlayerHue, pickFreeHue } from '../shared/colors';
+import { isPlayerHue, pickFreeHue, pickRandomFreeHue } from '../shared/colors';
 import type {
   ClientMessage,
   Dir,
@@ -8,8 +8,9 @@ import type {
   SendFn,
   ServerMessage,
 } from '../shared/protocol';
+import { BOT_ACTION_DELAY_MS, nextBotId, performBotAction } from './bot';
 import { Game, type GamePlayer } from './game';
-import { generateMaze, type RNG } from './maze';
+import { generateMaze, type Maze, type RNG } from './maze';
 
 export type RoomPhase = 'lobby' | 'playing' | 'over';
 
@@ -26,6 +27,7 @@ export interface RoomHooks {
 
 interface RoomPlayer extends GamePlayer {
   ready: boolean;
+  bot: boolean;
 }
 
 export type AddPlayerResult =
@@ -67,6 +69,7 @@ export class Room {
   private ownerId: string | null = null;
   private mazeWidth: number;
   private mazeHeight: number;
+  private botTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     config: Config,
@@ -154,6 +157,7 @@ export class Room {
       energy: 0,
       defeated: false,
       ready: false,
+      bot: false,
       pos: { x: 0, y: 0 },
     };
 
@@ -171,36 +175,118 @@ export class Room {
     return { ok: true };
   }
 
+  addBot(ownerId: string): RoomActionResult {
+    if (this.phase !== 'lobby') {
+      return {
+        ok: false,
+        code: 'game_running',
+        message: 'Ботов можно добавлять только до начала игры',
+      };
+    }
+    if (ownerId !== this.ownerId) {
+      return {
+        ok: false,
+        code: 'not_owner',
+        message: 'Добавлять ботов может только создатель комнаты',
+      };
+    }
+    if (this.players.size >= this.config.maxPlayers) {
+      return {
+        ok: false,
+        code: 'room_full',
+        message: 'Комната заполнена',
+      };
+    }
+
+    const player: RoomPlayer = {
+      id: `bot-${randomUUID()}`,
+      name: this.nextBotName(),
+      hue: pickRandomFreeHue(
+        [...this.players.values()].map((existing) => existing.hue),
+      ),
+      send: () => {},
+      connected: true,
+      active: false,
+      escaped: false,
+      energy: 0,
+      defeated: false,
+      ready: true,
+      bot: true,
+      pos: { x: 0, y: 0 },
+    };
+
+    this.players.set(player.id, player);
+    this.broadcastLobby();
+    this.tryStart();
+    return { ok: true };
+  }
+
+  removeBot(ownerId: string, botId: string): RoomActionResult {
+    if (this.phase !== 'lobby') {
+      return {
+        ok: false,
+        code: 'game_running',
+        message: 'Удалять ботов можно только до начала игры',
+      };
+    }
+    if (ownerId !== this.ownerId) {
+      return {
+        ok: false,
+        code: 'not_owner',
+        message: 'Удалять ботов может только создатель комнаты',
+      };
+    }
+
+    const bot = this.players.get(botId);
+    if (!bot || !bot.bot) {
+      return {
+        ok: false,
+        code: 'bot_not_found',
+        message: 'Бот не найден',
+      };
+    }
+
+    this.players.delete(botId);
+    this.broadcastLobby();
+    return { ok: true };
+  }
+
   removePlayer(id: string): void {
     const player = this.players.get(id);
-    if (!player) return;
+    if (!player || player.bot) return;
 
     if (this.phase === 'lobby') {
       this.players.delete(id);
-      this.ensureOwner();
-      if (this.players.size === 0) {
+      if (!this.hasConnectedHumans()) {
+        this.removeAllBots();
+        this.ownerId = null;
         this.hooks.onEmpty?.();
         return;
       }
+      this.ensureOwner();
       this.broadcastLobby();
       return;
     }
 
     player.connected = false;
+
+    if (!this.hasConnectedHumans()) {
+      this.clearBotTimer();
+      this.removeAllBots();
+      this.players.clear();
+      this.ownerId = null;
+      this.game = null;
+      this.phase = 'lobby';
+      this.overAcks.clear();
+      this.hooks.onEmpty?.();
+      return;
+    }
+
     this.ensureOwner();
 
     if (this.phase === 'playing' && this.game) {
       this.game.disconnect(id);
-    }
-
-    if (this.phase === 'over') {
-      const anyConnected = [...this.players.values()].some(
-        (candidate) => candidate.connected,
-      );
-      if (!anyConnected) {
-        this.resetToLobby();
-        return;
-      }
+      this.scheduleBot();
     }
 
     this.checkOverAcks();
@@ -319,6 +405,30 @@ export class Room {
         return;
       }
 
+      case 'addBot': {
+        const result = this.addBot(id);
+        if (!result.ok) {
+          this.sendTo(player, {
+            type: 'error',
+            code: result.code,
+            message: result.message,
+          });
+        }
+        return;
+      }
+
+      case 'removeBot': {
+        const result = this.removeBot(id, message.botId);
+        if (!result.ok) {
+          this.sendTo(player, {
+            type: 'error',
+            code: result.code,
+            message: result.message,
+          });
+        }
+        return;
+      }
+
       case 'ready':
         this.setReady(id, message.value);
         return;
@@ -327,6 +437,7 @@ export class Room {
         if (this.phase === 'playing' && this.game) {
           if (VALID_DIRS.has(message.dir)) {
             this.game.move(id, message.dir);
+            this.scheduleBot();
           }
         }
         return;
@@ -335,6 +446,7 @@ export class Room {
         if (this.phase === 'playing' && this.game) {
           if (message.action === 'swap' || message.action === 'fight') {
             this.game.chooseAction(id, message.action);
+            this.scheduleBot();
           }
         }
         return;
@@ -342,6 +454,7 @@ export class Room {
       case 'respondSwap':
         if (this.phase === 'playing' && this.game) {
           this.game.respondSwap(id, Boolean(message.accept));
+          this.scheduleBot();
         }
         return;
 
@@ -387,7 +500,7 @@ export class Room {
     if (connected.length < this.config.minPlayers) return;
     if (!connected.every((player) => player.ready)) return;
 
-    let maze;
+    let maze: Maze;
     try {
       maze = generateMaze(
         connected.length,
@@ -399,7 +512,7 @@ export class Room {
       const message =
         error instanceof Error ? error.message : 'Не удалось создать лабиринт';
       for (const player of connected) {
-        player.ready = false;
+        player.ready = player.bot;
         this.sendTo(player, {
           type: 'error',
           code: 'maze_failed',
@@ -423,12 +536,14 @@ export class Room {
       maze,
       rng: this.rng,
       onOver: () => {
+        this.clearBotTimer();
         this.phase = 'over';
         this.overAcks.clear();
         this.hooks.onChange?.();
       },
     });
     this.hooks.onChange?.();
+    this.scheduleBot();
   }
 
   private ackOver(id: string): void {
@@ -441,7 +556,7 @@ export class Room {
     if (this.phase !== 'over') return;
 
     const connected = [...this.players.values()].filter(
-      (player) => player.connected,
+      (player) => player.connected && !player.bot,
     );
     if (
       connected.length === 0 ||
@@ -452,6 +567,7 @@ export class Room {
   }
 
   private resetToLobby(): void {
+    this.clearBotTimer();
     this.phase = 'lobby';
     this.game = null;
     this.overAcks.clear();
@@ -461,12 +577,20 @@ export class Room {
         this.players.delete(player.id);
         continue;
       }
-      player.ready = false;
+      player.ready = player.bot;
       player.active = false;
       player.escaped = false;
       player.energy = 0;
       player.defeated = false;
       player.pos = { x: 0, y: 0 };
+    }
+
+    if (!this.hasConnectedHumans()) {
+      this.removeAllBots();
+      this.players.clear();
+      this.ownerId = null;
+      this.hooks.onEmpty?.();
+      return;
     }
 
     this.ensureOwner();
@@ -481,9 +605,11 @@ export class Room {
 
   private ensureOwner(): void {
     const current = this.ownerId ? this.players.get(this.ownerId) : undefined;
-    if (current && current.connected) return;
+    if (current && current.connected && !current.bot) return;
 
-    const next = [...this.players.values()].find((player) => player.connected);
+    const next = [...this.players.values()].find(
+      (player) => player.connected && !player.bot,
+    );
     this.ownerId = next ? next.id : null;
   }
 
@@ -496,6 +622,7 @@ export class Room {
         hue: player.hue,
         ready: player.ready,
         connected: player.connected,
+        bot: player.bot,
       }));
 
     const canStart =
@@ -504,7 +631,7 @@ export class Room {
       players.every((player) => player.ready);
 
     for (const player of this.players.values()) {
-      if (!player.connected) continue;
+      if (!player.connected || player.bot) continue;
       this.sendTo(player, {
         type: 'lobby',
         roomId: this.id,
@@ -519,6 +646,60 @@ export class Room {
     }
 
     this.hooks.onChange?.();
+  }
+
+  private hasConnectedHumans(): boolean {
+    return [...this.players.values()].some(
+      (player) => player.connected && !player.bot,
+    );
+  }
+
+  private removeAllBots(): void {
+    for (const player of [...this.players.values()]) {
+      if (player.bot) this.players.delete(player.id);
+    }
+  }
+
+  private nextBotName(): string {
+    let index = 1;
+    while (
+      [...this.players.values()].some(
+        (player) => player.name === `Бот ${index}`,
+      )
+    ) {
+      index += 1;
+    }
+    return `Бот ${index}`;
+  }
+
+  private botIds(): Set<string> {
+    const ids = new Set<string>();
+    for (const player of this.players.values()) {
+      if (player.bot && player.connected) ids.add(player.id);
+    }
+    return ids;
+  }
+
+  private clearBotTimer(): void {
+    if (!this.botTimer) return;
+    clearTimeout(this.botTimer);
+    this.botTimer = null;
+  }
+
+  private scheduleBot(): void {
+    this.clearBotTimer();
+    if (this.phase !== 'playing' || !this.game) return;
+
+    const botId = nextBotId(this.game, this.botIds());
+    if (!botId) return;
+
+    this.botTimer = setTimeout(() => {
+      this.botTimer = null;
+      if (this.phase !== 'playing' || !this.game) return;
+      const acted = performBotAction(this.game, botId, this.rng);
+      if (acted) this.scheduleBot();
+    }, BOT_ACTION_DELAY_MS);
+    this.botTimer.unref?.();
   }
 
   private sendTo(player: RoomPlayer, message: ServerMessage): void {

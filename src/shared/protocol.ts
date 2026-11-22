@@ -14,6 +14,7 @@ export interface LobbyPlayer {
   hue: number;
   ready: boolean;
   connected: boolean;
+  bot: boolean;
 }
 
 export interface RoomSummary {
@@ -40,6 +41,7 @@ export interface StatePlayer {
   escaped: boolean;
   active: boolean;
   connected: boolean;
+  bot: boolean;
   energy: number;
   defeated: boolean;
   isTurn: boolean;
@@ -95,6 +97,8 @@ export type ClientMessage =
   | { type: 'createRoom'; name: string; width: number; height: number }
   | { type: 'joinRoom'; name: string; roomId: string }
   | { type: 'leaveRoom' }
+  | { type: 'addBot' }
+  | { type: 'removeBot'; botId: string }
   | { type: 'setMazeSize'; width: number; height: number }
   | { type: 'setColor'; hue: number }
   | { type: 'ready'; value: boolean }
