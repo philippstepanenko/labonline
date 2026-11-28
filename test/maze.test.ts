@@ -5,6 +5,10 @@ import {
   parseKey,
   type Maze,
 } from '../src/server/maze';
+import type {
+  CorridorWidth,
+  MazeAlgorithm,
+} from '../src/shared/protocol';
 
 function mulberry32(seed: number): () => number {
   let state = seed >>> 0;
@@ -25,6 +29,31 @@ function allFloors(maze: Maze): Array<{ x: number; y: number }> {
     }
   }
   return result;
+}
+
+function floorNeighbours(
+  maze: Maze,
+  point: { x: number; y: number },
+): Array<{ x: number; y: number }> {
+  const result: Array<{ x: number; y: number }> = [];
+  for (const [dx, dy] of [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1],
+  ] as const) {
+    const x = point.x + dx;
+    const y = point.y + dy;
+    if (x < 0 || y < 0 || x >= maze.width || y >= maze.height) continue;
+    if (!maze.walls[y][x]) result.push({ x, y });
+  }
+  return result;
+}
+
+function deadEnds(maze: Maze): Array<{ x: number; y: number }> {
+  return allFloors(maze).filter(
+    (floor) => floorNeighbours(maze, floor).length === 1,
+  );
 }
 
 function bfs(
@@ -57,6 +86,48 @@ function bfs(
 
   return distance;
 }
+
+function belongsToFloorSquare(
+  maze: Maze,
+  point: { x: number; y: number },
+  size: number,
+): boolean {
+  for (let offsetY = 0; offsetY < size; offsetY++) {
+    for (let offsetX = 0; offsetX < size; offsetX++) {
+      const startX = point.x - offsetX;
+      const startY = point.y - offsetY;
+      if (
+        startX < 0 ||
+        startY < 0 ||
+        startX + size > maze.width ||
+        startY + size > maze.height
+      ) {
+        continue;
+      }
+
+      let allFloor = true;
+      for (let dy = 0; dy < size && allFloor; dy++) {
+        for (let dx = 0; dx < size; dx++) {
+          if (maze.walls[startY + dy][startX + dx]) {
+            allFloor = false;
+            break;
+          }
+        }
+      }
+
+      if (allFloor) return true;
+    }
+  }
+
+  return false;
+}
+
+const ALGORITHMS: MazeAlgorithm[] = [
+  'classic',
+  'prim',
+  'braided',
+  'wide',
+];
 
 describe('generateMaze', () => {
   it('генерирует связный лабиринт с K−1 выходами и K стартами', () => {
@@ -99,15 +170,91 @@ describe('generateMaze', () => {
     expect(first.starts).toEqual(second.starts);
   });
 
-  it('приводит размеры к нечётным', () => {
-    const maze = generateMaze(3, 20, 10, mulberry32(1));
-    expect(maze.width % 2).toBe(1);
-    expect(maze.height % 2).toBe(1);
-    expect(maze.width).toBeGreaterThanOrEqual(21);
-    expect(maze.height).toBeGreaterThanOrEqual(11);
+  it('принимает чётные размеры и сохраняет их', () => {
+    const maze = generateMaze(3, 20, 10, mulberry32(1), {
+      algorithm: 'classic',
+      corridorWidth: 1,
+    });
+    expect(maze.width).toBe(20);
+    expect(maze.height).toBe(10);
   });
 
   it('бросает ошибку, если лабиринт слишком мал для числа игроков', () => {
-    expect(() => generateMaze(16, 7, 7, mulberry32(1))).toThrow();
+    expect(() =>
+      generateMaze(16, 9, 9, mulberry32(1), { corridorWidth: 2 }),
+    ).toThrow();
+  });
+
+  it('поддерживает все алгоритмы и ширины коридора', () => {
+    for (const algorithm of ALGORITHMS) {
+      for (const corridorWidth of [1, 2, 3] as CorridorWidth[]) {
+        const maze = generateMaze(
+          4,
+          21,
+          21,
+          mulberry32(100 + corridorWidth),
+          { algorithm, corridorWidth },
+        );
+
+        expect(maze.algorithm).toBe(algorithm);
+        expect(maze.corridorWidth).toBe(corridorWidth);
+        expect(maze.exits.size).toBe(3);
+        expect(maze.starts).toHaveLength(4);
+
+        const floors = allFloors(maze);
+        const reachable = bfs(maze, floors[0]);
+        for (const floor of floors) {
+          expect(reachable[floor.y][floor.x]).toBeGreaterThanOrEqual(0);
+          expect(
+            belongsToFloorSquare(maze, floor, corridorWidth),
+          ).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('ставит выходы не в тупиках', () => {
+    for (const algorithm of ALGORITHMS) {
+      const maze = generateMaze(6, 21, 21, mulberry32(321), {
+        algorithm,
+        corridorWidth: 1,
+      });
+      const dead = new Set(
+        deadEnds(maze).map((point) => cellKey(point.x, point.y)),
+      );
+
+      for (const exitKey of maze.exits) {
+        expect(dead.has(exitKey)).toBe(false);
+      }
+    }
+  });
+
+  it('braided не оставляет тупиков при любой ширине коридора', () => {
+    for (const corridorWidth of [1, 2, 3] as CorridorWidth[]) {
+      const maze = generateMaze(5, 21, 21, mulberry32(99), {
+        algorithm: 'braided',
+        corridorWidth,
+      });
+      expect(deadEnds(maze)).toHaveLength(0);
+    }
+  });
+
+  it('random выбирает алгоритм только из пула', () => {
+    const pool: MazeAlgorithm[] = ['classic', 'wide'];
+    for (let seed = 1; seed <= 10; seed++) {
+      const maze = generateMaze(4, 15, 15, mulberry32(seed), {
+        algorithm: 'random',
+        algorithmPool: pool,
+      });
+      expect(pool).toContain(maze.algorithm);
+    }
+  });
+
+  it('random с пустым пулом выбирает из всех алгоритмов', () => {
+    const maze = generateMaze(4, 15, 15, mulberry32(5), {
+      algorithm: 'random',
+      algorithmPool: [],
+    });
+    expect(ALGORITHMS).toContain(maze.algorithm);
   });
 });

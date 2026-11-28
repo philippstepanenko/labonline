@@ -2,7 +2,13 @@ import { randomUUID } from 'node:crypto';
 import http from 'node:http';
 import path from 'node:path';
 import { WebSocketServer, WebSocket } from 'ws';
-import { loadConfig, type Config } from '../shared/config';
+import {
+  isCorridorWidth,
+  isMazeAlgorithm,
+  isMazeAlgorithmChoice,
+  loadConfig,
+  type Config,
+} from '../shared/config';
 import type { ClientMessage, SendFn, ServerMessage } from '../shared/protocol';
 import type { Room } from './room';
 import { RoomManager } from './rooms';
@@ -29,7 +35,24 @@ function isClientMessage(value: unknown): value is ClientMessage {
       return (
         typeof value.name === 'string' &&
         typeof value.width === 'number' &&
-        typeof value.height === 'number'
+        typeof value.height === 'number' &&
+        (value.algorithm === undefined ||
+          isMazeAlgorithmChoice(value.algorithm)) &&
+        (value.corridorWidth === undefined ||
+          isCorridorWidth(value.corridorWidth)) &&
+        (value.algorithmPool === undefined ||
+          (Array.isArray(value.algorithmPool) &&
+            value.algorithmPool.every(isMazeAlgorithm)))
+      );
+    case 'setMazeOptions':
+      return (
+        typeof value.width === 'number' &&
+        typeof value.height === 'number' &&
+        isMazeAlgorithmChoice(value.algorithm) &&
+        isCorridorWidth(value.corridorWidth) &&
+        (value.algorithmPool === undefined ||
+          (Array.isArray(value.algorithmPool) &&
+            value.algorithmPool.every(isMazeAlgorithm)))
       );
     case 'joinRoom':
       return typeof value.name === 'string' && typeof value.roomId === 'string';
@@ -155,6 +178,9 @@ export function createServer(
               send,
               width: parsed.width,
               height: parsed.height,
+              algorithm: parsed.algorithm,
+              corridorWidth: parsed.corridorWidth,
+              algorithmPool: parsed.algorithmPool,
             });
             if (!result.ok) {
               unjoined.set(id, send);

@@ -128,6 +128,55 @@ input:focus {
   box-shadow: 0 0 0 3px rgba(79, 140, 255, 0.16);
 }
 
+select {
+  font: inherit;
+  width: 100%;
+  padding: 11px 13px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #0b111b;
+  color: var(--text);
+  outline: none;
+}
+
+select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(79, 140, 255, 0.16);
+}
+
+.algorithm-pool {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #0f1622;
+}
+
+.algorithm-pool-label {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.algorithm-pool label.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.algorithm-pool input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--accent);
+}
+
 .screen {
   min-height: 100dvh;
   display: flex;
@@ -369,7 +418,8 @@ form label {
   margin-top: 0;
 }
 
-.size-row input {
+.size-row input,
+.size-row select {
   margin-top: 6px;
 }
 
@@ -963,16 +1013,17 @@ button.secondary {
   }
 
   #maze-size-form .size-row {
-    flex-wrap: nowrap;
-    gap: 6px;
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
   #maze-size-form .size-row label {
-    flex: 1 1 0;
+    flex: 1 1 120px;
     min-width: 0;
   }
 
-  #maze-size-form .size-row input {
+  #maze-size-form .size-row input,
+  #maze-size-form .size-row select {
     min-width: 0;
     padding: 10px 8px;
   }

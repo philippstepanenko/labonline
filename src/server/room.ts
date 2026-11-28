@@ -1,16 +1,29 @@
 import { randomInt, randomUUID } from 'node:crypto';
-import { normalizeMazeSize, type Config } from '../shared/config';
+import {
+  DEFAULT_CORRIDOR_WIDTH,
+  DEFAULT_MAZE_ALGORITHM,
+  MAZE_ALGORITHMS,
+  normalizeMazeSettings,
+  type Config,
+} from '../shared/config';
 import { isPlayerHue, pickFreeHue, pickRandomFreeHue } from '../shared/colors';
 import type {
   ClientMessage,
+  CorridorWidth,
   Dir,
   LobbyPlayer,
+  MazeAlgorithm,
+  MazeAlgorithmChoice,
   SendFn,
   ServerMessage,
 } from '../shared/protocol';
 import { BOT_ACTION_DELAY_MS, nextBotId, performBotAction } from './bot';
 import { Game, type GamePlayer } from './game';
-import { generateMaze, type Maze, type RNG } from './maze';
+import {
+  generateMaze,
+  type GeneratedMaze,
+  type RNG,
+} from './maze';
 
 export type RoomPhase = 'lobby' | 'playing' | 'over';
 
@@ -18,6 +31,17 @@ export interface RoomOptions {
   id: string;
   mazeWidth: number;
   mazeHeight: number;
+  algorithm?: MazeAlgorithmChoice;
+  corridorWidth?: CorridorWidth;
+  algorithmPool?: MazeAlgorithm[];
+}
+
+export interface MazeOptions {
+  width: number;
+  height: number;
+  algorithm: MazeAlgorithmChoice;
+  corridorWidth: CorridorWidth;
+  algorithmPool?: MazeAlgorithm[];
 }
 
 export interface RoomHooks {
@@ -69,6 +93,9 @@ export class Room {
   private ownerId: string | null = null;
   private mazeWidth: number;
   private mazeHeight: number;
+  private mazeAlgorithm: MazeAlgorithmChoice;
+  private corridorWidth: CorridorWidth;
+  private algorithmPool: MazeAlgorithm[];
   private botTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
@@ -81,6 +108,12 @@ export class Room {
     this.id = options.id;
     this.mazeWidth = options.mazeWidth;
     this.mazeHeight = options.mazeHeight;
+    this.mazeAlgorithm = options.algorithm ?? DEFAULT_MAZE_ALGORITHM;
+    this.corridorWidth =
+      options.corridorWidth ?? DEFAULT_CORRIDOR_WIDTH;
+    this.algorithmPool = options.algorithmPool
+      ? [...options.algorithmPool]
+      : [...MAZE_ALGORITHMS];
     this.hooks = hooks;
     this.rng = rng;
   }
@@ -108,6 +141,18 @@ export class Room {
 
   get currentMazeHeight(): number {
     return this.mazeHeight;
+  }
+
+  get currentMazeAlgorithm(): MazeAlgorithmChoice {
+    return this.mazeAlgorithm;
+  }
+
+  get currentCorridorWidth(): CorridorWidth {
+    return this.corridorWidth;
+  }
+
+  get currentAlgorithmPool(): MazeAlgorithm[] {
+    return [...this.algorithmPool];
   }
 
   addPlayer(id: string, name: string, send: SendFn): AddPlayerResult {
@@ -293,36 +338,49 @@ export class Room {
     this.hooks.onChange?.();
   }
 
-  setMazeSize(id: string, width: number, height: number): RoomActionResult {
+  setMazeOptions(id: string, options: MazeOptions): RoomActionResult {
     if (this.phase !== 'lobby') {
       return {
         ok: false,
         code: 'game_running',
-        message: 'Размер можно менять только до начала игры',
+        message: 'Настройки можно менять только до начала игры',
       };
     }
     if (id !== this.ownerId) {
       return {
         ok: false,
         code: 'not_owner',
-        message: 'Менять размер лабиринта может только создатель комнаты',
+        message: 'Менять настройки лабиринта может только создатель комнаты',
       };
     }
 
-    const nextWidth = normalizeMazeSize(width);
-    const nextHeight = normalizeMazeSize(height);
-    if (nextWidth === null || nextHeight === null) {
+    const normalized = normalizeMazeSettings(options);
+    if (!normalized.ok) {
       return {
         ok: false,
-        code: 'bad_size',
-        message: 'Размер должен быть целым числом от 9 до 21',
+        code: normalized.code,
+        message: normalized.message,
       };
     }
 
-    this.mazeWidth = nextWidth;
-    this.mazeHeight = nextHeight;
+    const settings = normalized.value;
+    this.mazeWidth = settings.width;
+    this.mazeHeight = settings.height;
+    this.mazeAlgorithm = settings.algorithm;
+    this.corridorWidth = settings.corridorWidth;
+    this.algorithmPool = settings.algorithmPool;
     this.broadcastLobby();
     return { ok: true };
+  }
+
+  setMazeSize(id: string, width: number, height: number): RoomActionResult {
+    return this.setMazeOptions(id, {
+      width,
+      height,
+      algorithm: this.mazeAlgorithm,
+      corridorWidth: this.corridorWidth,
+      algorithmPool: this.algorithmPool,
+    });
   }
 
   setColor(id: string, hue: number): RoomActionResult {
@@ -381,6 +439,24 @@ export class Room {
     if (!player) return;
 
     switch (message.type) {
+      case 'setMazeOptions': {
+        const result = this.setMazeOptions(id, {
+          width: message.width,
+          height: message.height,
+          algorithm: message.algorithm,
+          corridorWidth: message.corridorWidth,
+          algorithmPool: message.algorithmPool,
+        });
+        if (!result.ok) {
+          this.sendTo(player, {
+            type: 'error',
+            code: result.code,
+            message: result.message,
+          });
+        }
+        return;
+      }
+
       case 'setMazeSize': {
         const result = this.setMazeSize(id, message.width, message.height);
         if (!result.ok) {
@@ -500,13 +576,18 @@ export class Room {
     if (connected.length < this.config.minPlayers) return;
     if (!connected.every((player) => player.ready)) return;
 
-    let maze: Maze;
+    let maze: GeneratedMaze;
     try {
       maze = generateMaze(
         connected.length,
         this.mazeWidth,
         this.mazeHeight,
         this.rng,
+        {
+          algorithm: this.mazeAlgorithm,
+          corridorWidth: this.corridorWidth,
+          algorithmPool: this.algorithmPool,
+        },
       );
     } catch (error) {
       const message =
@@ -534,6 +615,8 @@ export class Room {
       players: connected,
       order,
       maze,
+      algorithm: maze.algorithm,
+      corridorWidth: maze.corridorWidth,
       rng: this.rng,
       onOver: () => {
         this.clearBotTimer();
@@ -638,6 +721,9 @@ export class Room {
         ownerId: this.ownerId,
         mazeWidth: this.mazeWidth,
         mazeHeight: this.mazeHeight,
+        algorithm: this.mazeAlgorithm,
+        corridorWidth: this.corridorWidth,
+        algorithmPool: [...this.algorithmPool],
         players,
         maxPlayers: this.config.maxPlayers,
         minPlayers: this.config.minPlayers,

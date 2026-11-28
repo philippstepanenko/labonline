@@ -1,7 +1,13 @@
+import {
+  DEFAULT_CORRIDOR_WIDTH,
+  DEFAULT_MAZE_ALGORITHM,
+} from '../shared/config';
 import type {
   CellChar,
+  CorridorWidth,
   Dir,
   EventKind,
+  MazeAlgorithm,
   NamedPlayer,
   PendingRole,
   Point,
@@ -64,6 +70,8 @@ export interface GameOptions {
   players: GamePlayer[];
   order: string[];
   maze: Maze;
+  algorithm?: MazeAlgorithm;
+  corridorWidth?: CorridorWidth;
   rng?: RNG;
   onOver?: (escaped: string[], losers: string[]) => void;
 }
@@ -99,6 +107,8 @@ export class Game {
   private readonly players: GamePlayer[];
   private readonly byId = new Map<string, GamePlayer>();
   private readonly order: string[];
+  private readonly algorithm: MazeAlgorithm;
+  private readonly corridorWidth: CorridorWidth;
   private readonly rng: RNG;
   private readonly onOver?: (escaped: string[], losers: string[]) => void;
 
@@ -116,6 +126,9 @@ export class Game {
     this.exits = new Set(options.maze.exits);
     this.players = options.players;
     this.order = [...options.order];
+    this.algorithm = options.algorithm ?? DEFAULT_MAZE_ALGORITHM;
+    this.corridorWidth =
+      options.corridorWidth ?? DEFAULT_CORRIDOR_WIDTH;
     this.rng = options.rng ?? Math.random;
     this.onOver = options.onOver;
     this.startCount = this.order.length;
@@ -758,6 +771,8 @@ export class Game {
         youId: player.id,
         width: this.width,
         height: this.height,
+        algorithm: this.algorithm,
+        corridorWidth: this.corridorWidth,
         order: named,
         players: named,
       });

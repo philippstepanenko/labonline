@@ -111,6 +111,11 @@ function handleMessage(message) {
       state.ownerId = message.ownerId;
       state.mazeWidth = message.mazeWidth;
       state.mazeHeight = message.mazeHeight;
+      state.mazeAlgorithm = message.algorithm ?? 'prim';
+      state.corridorWidth = message.corridorWidth ?? 1;
+      state.algorithmPool = Array.isArray(message.algorithmPool)
+        ? [...message.algorithmPool]
+        : ['classic', 'prim', 'braided', 'wide'];
       state.over = null;
       state.busy = false;
       state.turn = null;
@@ -125,12 +130,17 @@ function handleMessage(message) {
 
     case 'start':
       resetForStart(message);
+      state.mazeAlgorithm = message.algorithm ?? state.mazeAlgorithm;
+      state.corridorWidth = message.corridorWidth ?? state.corridorWidth;
       ui.closeModal();
       ui.hideBackToLobby();
       ui.setScreen('game');
       ui.renderGame();
       view.reset();
       view.draw();
+      ui.toast(
+        `Лабиринт: ${ui.algorithmLabel(state.mazeAlgorithm)} · коридор ${state.corridorWidth}`,
+      );
       break;
 
     case 'state': {
@@ -251,6 +261,33 @@ document.querySelector('#rooms-list').addEventListener('click', (event) => {
   });
 });
 
+function readAlgorithmPool(containerSelector) {
+  const container = document.querySelector(containerSelector);
+  if (!container) return [];
+  return [...container.querySelectorAll('input[data-algorithm]:checked')].map(
+    (input) => input.dataset.algorithm,
+  );
+}
+
+function readMazeSettings(prefix) {
+  return {
+    width: Number(document.querySelector(`#${prefix}-width`).value),
+    height: Number(document.querySelector(`#${prefix}-height`).value),
+    algorithm: document.querySelector(`#${prefix}-algorithm`).value,
+    corridorWidth: Number(
+      document.querySelector(`#${prefix}-corridor`).value,
+    ),
+    algorithmPool: readAlgorithmPool(`#${prefix}-algorithm-pool`),
+  };
+}
+
+for (const prefix of ['create', 'maze']) {
+  document
+    .querySelector(`#${prefix}-algorithm`)
+    .addEventListener('change', () => ui.syncAlgorithmPool(prefix));
+  ui.syncAlgorithmPool(prefix);
+}
+
 document.querySelector('#create-room-form').addEventListener('submit', (event) => {
   event.preventDefault();
   if (!state.name) {
@@ -258,24 +295,21 @@ document.querySelector('#create-room-form').addEventListener('submit', (event) =
     return;
   }
 
-  const width = Number(document.querySelector('#create-width').value);
-  const height = Number(document.querySelector('#create-height').value);
-
   createButton.disabled = true;
   ui.clearRoomsError();
   ensureConnection().send({
     type: 'createRoom',
     name: state.name,
-    width,
-    height,
+    ...readMazeSettings('create'),
   });
 });
 
 document.querySelector('#maze-size-form').addEventListener('submit', (event) => {
   event.preventDefault();
-  const width = Number(document.querySelector('#maze-width').value);
-  const height = Number(document.querySelector('#maze-height').value);
-  ensureConnection().send({ type: 'setMazeSize', width, height });
+  ensureConnection().send({
+    type: 'setMazeOptions',
+    ...readMazeSettings('maze'),
+  });
 });
 
 document.querySelector('#color-options').addEventListener('click', (event) => {

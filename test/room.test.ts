@@ -51,6 +51,108 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+describe('Настройки лабиринта в комнате', () => {
+  it('владелец меняет алгоритм и ширину коридора, гость — нет', () => {
+    const { sent, sendFor } = collect();
+    const room = makeRoom();
+
+    room.addPlayer('owner', 'Owner', sendFor('owner'));
+    room.addPlayer('guest', 'Guest', sendFor('guest'));
+
+    expect(
+      room.setMazeOptions('guest', {
+        width: 15,
+        height: 13,
+        algorithm: 'wide',
+        corridorWidth: 2,
+      }),
+    ).toMatchObject({ ok: false, code: 'not_owner' });
+
+    expect(
+      room.setMazeOptions('owner', {
+        width: 15,
+        height: 13,
+        algorithm: 'wide',
+        corridorWidth: 2,
+      }),
+    ).toEqual({ ok: true });
+
+    const lobby = lastLobby(sent, 'owner');
+    expect(lobby).toMatchObject({
+      mazeWidth: 15,
+      mazeHeight: 13,
+      algorithm: 'wide',
+      corridorWidth: 2,
+      algorithmPool: [],
+    });
+  });
+
+  it('сохраняет пул алгоритмов для random и валидирует значения', () => {
+    const { sent, sendFor } = collect();
+    const room = makeRoom();
+
+    room.addPlayer('owner', 'Owner', sendFor('owner'));
+
+    expect(
+      room.setMazeOptions('owner', {
+        width: 15,
+        height: 15,
+        algorithm: 'random',
+        corridorWidth: 3,
+        algorithmPool: ['classic', 'prim'],
+      }),
+    ).toEqual({ ok: true });
+
+    const lobby = lastLobby(sent, 'owner');
+    expect(lobby).toMatchObject({
+      algorithm: 'random',
+      corridorWidth: 3,
+      algorithmPool: ['classic', 'prim'],
+    });
+
+    expect(
+      room.setMazeOptions('owner', {
+        width: 15,
+        height: 15,
+        algorithm: 'wide',
+        corridorWidth: 4 as never,
+      }),
+    ).toMatchObject({ ok: false, code: 'bad_corridor' });
+
+    expect(
+      room.setMazeOptions('owner', {
+        width: 15,
+        height: 15,
+        algorithm: 'nope' as never,
+        corridorWidth: 1,
+      }),
+    ).toMatchObject({ ok: false, code: 'bad_algorithm' });
+  });
+
+  it('legacy setMazeSize сохраняет алгоритм и ширину коридора', () => {
+    const { sent, sendFor } = collect();
+    const room = makeRoom();
+
+    room.addPlayer('owner', 'Owner', sendFor('owner'));
+    room.setMazeOptions('owner', {
+      width: 15,
+      height: 15,
+      algorithm: 'braided',
+      corridorWidth: 2,
+    });
+
+    expect(room.setMazeSize('owner', 13, 11)).toEqual({ ok: true });
+
+    const lobby = lastLobby(sent, 'owner');
+    expect(lobby).toMatchObject({
+      mazeWidth: 13,
+      mazeHeight: 11,
+      algorithm: 'braided',
+      corridorWidth: 2,
+    });
+  });
+});
+
 describe('Боты в комнате', () => {
   it('владелец добавляет и удаляет готового бота', () => {
     const { sent, sendFor } = collect();

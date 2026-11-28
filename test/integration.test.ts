@@ -4,7 +4,18 @@ import { WebSocket } from 'ws';
 import { createServer, type RunningServer } from '../src/server/server';
 import { PLAYER_HUES } from '../src/shared/colors';
 import type { Config } from '../src/shared/config';
-import type { ServerMessage } from '../src/shared/protocol';
+import type {
+  CorridorWidth,
+  MazeAlgorithm,
+  MazeAlgorithmChoice,
+  ServerMessage,
+} from '../src/shared/protocol';
+
+interface RoomSettings {
+  algorithm?: MazeAlgorithmChoice;
+  corridorWidth?: CorridorWidth;
+  algorithmPool?: MazeAlgorithm[];
+}
 
 class TestClient {
   readonly messages: ServerMessage[] = [];
@@ -68,8 +79,9 @@ async function createRoom(
   name: string,
   width = 9,
   height = 9,
+  settings: RoomSettings = {},
 ) {
-  client.send({ type: 'createRoom', name, width, height });
+  client.send({ type: 'createRoom', name, width, height, ...settings });
 
   const welcome = await client.waitFor((message) => message.type === 'welcome');
   if (welcome.type !== 'welcome') throw new Error('Ожидался welcome');
@@ -123,6 +135,8 @@ describe('WebSocket-сервер', () => {
     expect(lobby.ownerId).toBe(welcome.youId);
     expect(lobby.mazeWidth).toBe(9);
     expect(lobby.mazeHeight).toBe(11);
+    expect(lobby.algorithm).toBe('prim');
+    expect(lobby.corridorWidth).toBe(1);
 
     second.send({ type: 'listRooms' });
     const rooms = await second.waitFor(
@@ -134,6 +148,8 @@ describe('WebSocket-сервер', () => {
     expect(rooms.rooms[0].playerCount).toBe(1);
     expect(rooms.rooms[0].mazeWidth).toBe(9);
     expect(rooms.rooms[0].mazeHeight).toBe(11);
+    expect(rooms.rooms[0].algorithm).toBe('prim');
+    expect(rooms.rooms[0].corridorWidth).toBe(1);
 
     second.send({ type: 'joinRoom', name: 'Боря', roomId: welcome.roomId });
     const secondWelcome = await second.waitFor(
@@ -178,6 +194,8 @@ describe('WebSocket-сервер', () => {
     if (start.type !== 'start') throw new Error('Ожидался start');
     expect(start.width).toBe(13);
     expect(start.height).toBe(15);
+    expect(start.algorithm).toBe('prim');
+    expect(start.corridorWidth).toBe(1);
     expect(start.order).toHaveLength(2);
 
     const firstState = await first.waitFor(
@@ -216,6 +234,62 @@ describe('WebSocket-сервер', () => {
         message.type === 'chooseAction',
     );
     expect(['state', 'moveRejected', 'chooseAction']).toContain(response.type);
+  });
+
+  it('меняет настройки лабиринта и применяет random при старте', async () => {
+    const url = await startServer();
+
+    const first = await connect(url);
+    const second = await connect(url);
+    clients.push(first, second);
+
+    const { welcome } = await createRoom(first, 'Аня', 9, 9, {
+      algorithm: 'prim',
+      corridorWidth: 1,
+    });
+
+    second.send({ type: 'joinRoom', name: 'Боря', roomId: welcome.roomId });
+    await second.waitFor((message) => message.type === 'welcome');
+    await second.waitFor(
+      (message) => message.type === 'lobby' && message.players.length === 2,
+    );
+
+    first.send({
+      type: 'setMazeOptions',
+      width: 13,
+      height: 15,
+      algorithm: 'random',
+      corridorWidth: 2,
+      algorithmPool: ['classic', 'wide'],
+    });
+
+    const updatedFirst = await first.waitFor(
+      (message) =>
+        message.type === 'lobby' &&
+        message.mazeWidth === 13 &&
+        message.mazeHeight === 15 &&
+        message.algorithm === 'random' &&
+        message.corridorWidth === 2,
+    );
+    if (updatedFirst.type !== 'lobby') throw new Error('Ожидался lobby');
+    expect(updatedFirst.algorithmPool).toEqual(['classic', 'wide']);
+
+    await second.waitFor(
+      (message) =>
+        message.type === 'lobby' &&
+        message.algorithm === 'random' &&
+        message.corridorWidth === 2,
+    );
+
+    first.send({ type: 'ready', value: true });
+    second.send({ type: 'ready', value: true });
+
+    const start = await first.waitFor((message) => message.type === 'start');
+    if (start.type !== 'start') throw new Error('Ожидался start');
+    expect(['classic', 'wide']).toContain(start.algorithm);
+    expect(start.corridorWidth).toBe(2);
+    expect(start.width).toBe(13);
+    expect(start.height).toBe(15);
   });
 
   it('проверяет права владельца, размеры и уникальность имени', async () => {

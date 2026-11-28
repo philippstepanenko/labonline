@@ -51,7 +51,7 @@
                   type="number"
                   min="9"
                   max="21"
-                  step="2"
+                  step="1"
                   value="15"
                   required
                 />
@@ -63,12 +63,53 @@
                   type="number"
                   min="9"
                   max="21"
-                  step="2"
+                  step="1"
                   value="15"
                   required
                 />
               </label>
+              <label>
+                Алгоритм
+                <select id="create-algorithm">
+                  <option value="prim" selected>Prim — ветвистый</option>
+                  <option value="classic">Classic — классический</option>
+                  <option value="braided">Braided — с петлями</option>
+                  <option value="wide">Wide — комнаты</option>
+                  <option value="random">Случайный</option>
+                </select>
+              </label>
+              <label>
+                Ширина коридора
+                <select id="create-corridor">
+                  <option value="1" selected>1 клетка</option>
+                  <option value="2">2 клетки</option>
+                  <option value="3">3 клетки</option>
+                </select>
+              </label>
               <button type="submit">Создать комнату</button>
+            </div>
+            <div
+              id="create-algorithm-pool"
+              class="algorithm-pool"
+              hidden
+            >
+              <span class="algorithm-pool-label">Случайный из:</span>
+              <label class="check">
+                <input type="checkbox" data-algorithm="classic" checked />
+                Classic
+              </label>
+              <label class="check">
+                <input type="checkbox" data-algorithm="prim" checked />
+                Prim
+              </label>
+              <label class="check">
+                <input type="checkbox" data-algorithm="braided" checked />
+                Braided
+              </label>
+              <label class="check">
+                <input type="checkbox" data-algorithm="wide" checked />
+                Wide
+              </label>
             </div>
           </form>
           <p id="rooms-error" class="error" role="alert" hidden></p>
@@ -79,8 +120,8 @@
         <div class="card">
           <h1>Лобби <span id="room-code" class="room-code"></span></h1>
           <p class="muted">
-            Владелец: <span id="lobby-owner">—</span> · Размер лабиринта:
-            <span id="maze-size">—</span>
+            Владелец: <span id="lobby-owner">—</span> · Лабиринт:
+            <span id="maze-size">—</span> · <span id="maze-mode">—</span>
           </p>
           <p class="muted">
             Игроки: <span id="lobby-count">0 / 0</span>
@@ -103,7 +144,7 @@
           </div>
           <p id="lobby-hint" class="muted"></p>
           <form id="maze-size-form" autocomplete="off" hidden>
-            <h2>Размер лабиринта</h2>
+            <h2>Настройки лабиринта</h2>
             <div class="row size-row">
               <label>
                 Ширина
@@ -112,7 +153,7 @@
                   type="number"
                   min="9"
                   max="21"
-                  step="2"
+                  step="1"
                   required
                 />
               </label>
@@ -123,11 +164,48 @@
                   type="number"
                   min="9"
                   max="21"
-                  step="2"
+                  step="1"
                   required
                 />
               </label>
+              <label>
+                Алгоритм
+                <select id="maze-algorithm">
+                  <option value="prim" selected>Prim — ветвистый</option>
+                  <option value="classic">Classic — классический</option>
+                  <option value="braided">Braided — с петлями</option>
+                  <option value="wide">Wide — комнаты</option>
+                  <option value="random">Случайный</option>
+                </select>
+              </label>
+              <label>
+                Ширина коридора
+                <select id="maze-corridor">
+                  <option value="1" selected>1 клетка</option>
+                  <option value="2">2 клетки</option>
+                  <option value="3">3 клетки</option>
+                </select>
+              </label>
               <button type="submit">Применить</button>
+            </div>
+            <div id="maze-algorithm-pool" class="algorithm-pool" hidden>
+              <span class="algorithm-pool-label">Случайный из:</span>
+              <label class="check">
+                <input type="checkbox" data-algorithm="classic" checked />
+                Classic
+              </label>
+              <label class="check">
+                <input type="checkbox" data-algorithm="prim" checked />
+                Prim
+              </label>
+              <label class="check">
+                <input type="checkbox" data-algorithm="braided" checked />
+                Braided
+              </label>
+              <label class="check">
+                <input type="checkbox" data-algorithm="wide" checked />
+                Wide
+              </label>
             </div>
           </form>
           <button id="ready-button" type="button">Готов</button>

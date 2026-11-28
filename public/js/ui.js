@@ -17,6 +17,43 @@ function $(selector) {
   return document.querySelector(selector);
 }
 
+export const ALGORITHM_LABELS = {
+  classic: 'Classic',
+  prim: 'Prim',
+  braided: 'Braided',
+  wide: 'Wide',
+  random: 'Случайный',
+};
+
+export function algorithmLabel(value) {
+  return ALGORITHM_LABELS[value] ?? String(value ?? '—');
+}
+
+function corridorLabel(width) {
+  return `коридор ${width ?? 1}`;
+}
+
+export function syncAlgorithmPool(prefix) {
+  const select = $(`#${prefix}-algorithm`);
+  const pool = $(`#${prefix}-algorithm-pool`);
+  if (!select || !pool) return;
+  pool.hidden = select.value !== 'random';
+}
+
+function setPoolCheckboxes(containerSelector, pool) {
+  const container = $(containerSelector);
+  if (!container) return;
+
+  const values = new Set(
+    Array.isArray(pool) && pool.length > 0
+      ? pool
+      : ['classic', 'prim', 'braided', 'wide'],
+  );
+  for (const input of container.querySelectorAll('input[data-algorithm]')) {
+    input.checked = values.has(input.dataset.algorithm);
+  }
+}
+
 export function setScreen(name) {
   state.screen = name;
   for (const element of document.querySelectorAll('.screen')) {
@@ -82,12 +119,13 @@ export function renderRooms(rooms) {
           : room.phase === 'playing'
             ? 'Игра идёт'
             : 'Недоступна';
+      const mode = `${algorithmLabel(room.algorithm)} · ${corridorLabel(room.corridorWidth)}`;
 
       return `<li class="room-item">
         <div class="room-info">
           <span class="room-code">${escapeHtml(room.id)}</span>
           <span class="player-name">${owner}</span>
-          <span class="tags">${room.playerCount}/${room.maxPlayers} · ${room.mazeWidth}×${room.mazeHeight} · ${status}</span>
+          <span class="tags">${room.playerCount}/${room.maxPlayers} · ${room.mazeWidth}×${room.mazeHeight} · ${mode} · ${status}</span>
         </div>
         <button type="button" data-room-id="${escapeHtml(room.id)}" ${joinable ? '' : 'disabled'}>${label}</button>
       </li>`;
@@ -101,12 +139,18 @@ export function renderLobby(message) {
   state.ownerId = message.ownerId;
   state.mazeWidth = message.mazeWidth;
   state.mazeHeight = message.mazeHeight;
+  state.mazeAlgorithm = message.algorithm ?? 'prim';
+  state.corridorWidth = message.corridorWidth ?? 1;
+  state.algorithmPool = Array.isArray(message.algorithmPool)
+    ? [...message.algorithmPool]
+    : ['classic', 'prim', 'braided', 'wide'];
 
   $('#room-code').textContent = message.roomId;
   $('#lobby-owner').textContent =
     message.players.find((player) => player.id === message.ownerId)?.name ??
     '—';
   $('#maze-size').textContent = `${message.mazeWidth}×${message.mazeHeight}`;
+  $('#maze-mode').textContent = `${algorithmLabel(state.mazeAlgorithm)} · ${corridorLabel(state.corridorWidth)}`;
   $('#lobby-count').textContent = `${message.players.length} / ${message.maxPlayers}`;
 
   const list = $('#lobby-players');
@@ -140,6 +184,10 @@ export function renderLobby(message) {
   sizeForm.hidden = !isOwner;
   $('#maze-width').value = String(message.mazeWidth);
   $('#maze-height').value = String(message.mazeHeight);
+  $('#maze-algorithm').value = state.mazeAlgorithm;
+  $('#maze-corridor').value = String(state.corridorWidth);
+  setPoolCheckboxes('#maze-algorithm-pool', state.algorithmPool);
+  syncAlgorithmPool('maze');
 
   $('#bot-controls').hidden = !isOwner;
   $('#add-bot-button').disabled = message.players.length >= message.maxPlayers;

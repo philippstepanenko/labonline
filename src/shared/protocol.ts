@@ -2,6 +2,9 @@ export type Dir = 'up' | 'down' | 'left' | 'right';
 export type CellChar = '#' | '.' | 'E' | 'X';
 export type GamePhase = 'lobby' | 'playing' | 'over';
 export type PendingRole = 'choose' | 'wait' | 'respond' | null;
+export type MazeAlgorithm = 'classic' | 'prim' | 'braided' | 'wide';
+export type MazeAlgorithmChoice = MazeAlgorithm | 'random';
+export type CorridorWidth = 1 | 2 | 3;
 
 export interface Point {
   x: number;
@@ -26,6 +29,8 @@ export interface RoomSummary {
   minPlayers: number;
   mazeWidth: number;
   mazeHeight: number;
+  algorithm: MazeAlgorithmChoice;
+  corridorWidth: CorridorWidth;
   phase: GamePhase;
 }
 
@@ -94,11 +99,27 @@ export type EventKind =
 
 export type ClientMessage =
   | { type: 'listRooms' }
-  | { type: 'createRoom'; name: string; width: number; height: number }
+  | {
+      type: 'createRoom';
+      name: string;
+      width: number;
+      height: number;
+      algorithm?: MazeAlgorithmChoice;
+      corridorWidth?: CorridorWidth;
+      algorithmPool?: MazeAlgorithm[];
+    }
   | { type: 'joinRoom'; name: string; roomId: string }
   | { type: 'leaveRoom' }
   | { type: 'addBot' }
   | { type: 'removeBot'; botId: string }
+  | {
+      type: 'setMazeOptions';
+      width: number;
+      height: number;
+      algorithm: MazeAlgorithmChoice;
+      corridorWidth: CorridorWidth;
+      algorithmPool?: MazeAlgorithm[];
+    }
   | { type: 'setMazeSize'; width: number; height: number }
   | { type: 'setColor'; hue: number }
   | { type: 'ready'; value: boolean }
@@ -125,6 +146,9 @@ export type ServerMessage =
       ownerId: string | null;
       mazeWidth: number;
       mazeHeight: number;
+      algorithm: MazeAlgorithmChoice;
+      corridorWidth: CorridorWidth;
+      algorithmPool: MazeAlgorithm[];
       players: LobbyPlayer[];
       maxPlayers: number;
       minPlayers: number;
@@ -135,6 +159,8 @@ export type ServerMessage =
       youId: string;
       width: number;
       height: number;
+      algorithm: MazeAlgorithm;
+      corridorWidth: CorridorWidth;
       order: NamedPlayer[];
       players: NamedPlayer[];
     }

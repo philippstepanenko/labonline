@@ -1,6 +1,12 @@
 import { randomBytes } from 'node:crypto';
-import { normalizeMazeSize, type Config } from '../shared/config';
-import type { RoomSummary, SendFn } from '../shared/protocol';
+import { normalizeMazeSettings, type Config } from '../shared/config';
+import type {
+  CorridorWidth,
+  MazeAlgorithm,
+  MazeAlgorithmChoice,
+  RoomSummary,
+  SendFn,
+} from '../shared/protocol';
 import { Room, cryptoRng } from './room';
 import type { RNG } from './maze';
 
@@ -14,6 +20,9 @@ export interface CreateRoomOptions {
   send: SendFn;
   width: number;
   height: number;
+  algorithm?: MazeAlgorithmChoice;
+  corridorWidth?: CorridorWidth;
+  algorithmPool?: MazeAlgorithm[];
 }
 
 export interface JoinRoomOptions {
@@ -55,25 +64,40 @@ export class RoomManager {
         minPlayers: this.config.minPlayers,
         mazeWidth: room.currentMazeWidth,
         mazeHeight: room.currentMazeHeight,
+        algorithm: room.currentMazeAlgorithm,
+        corridorWidth: room.currentCorridorWidth,
         phase: room.currentPhase,
       }));
   }
 
   createRoom(options: CreateRoomOptions): RoomManagerResult {
-    const width = normalizeMazeSize(options.width);
-    const height = normalizeMazeSize(options.height);
-    if (width === null || height === null) {
+    const normalized = normalizeMazeSettings({
+      width: options.width,
+      height: options.height,
+      algorithm: options.algorithm,
+      corridorWidth: options.corridorWidth,
+      algorithmPool: options.algorithmPool,
+    });
+    if (!normalized.ok) {
       return {
         ok: false,
-        code: 'bad_size',
-        message: 'Размер должен быть целым числом от 9 до 21',
+        code: normalized.code,
+        message: normalized.message,
       };
     }
 
+    const settings = normalized.value;
     const id = this.generateId();
     const room: Room = new Room(
       this.config,
-      { id, mazeWidth: width, mazeHeight: height },
+      {
+        id,
+        mazeWidth: settings.width,
+        mazeHeight: settings.height,
+        algorithm: settings.algorithm,
+        corridorWidth: settings.corridorWidth,
+        algorithmPool: settings.algorithmPool,
+      },
       {
         onChange: () => this.onChange(),
         onEmpty: () => this.removeRoom(id),
